@@ -22,7 +22,7 @@ export default function Cart() {
     setPlacing(true);
     try {
       const orderItems = items.map((i) => ({ product_id: i.product_id, quantity: i.quantity }));
-      await createOrder(token, orderItems);
+      await createOrder(orderItems);
       clearCart();
       toast.success("Order placed!");
       navigate("/orders");
@@ -37,7 +37,7 @@ export default function Cart() {
 
   if (items.length === 0) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-12">
+      <div className="page-container py-12">
         <EmptyState
           title="Your cart is empty"
           description="Browse the catalog and add a few products."
@@ -52,8 +52,8 @@ export default function Cart() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900">Your cart</h1>
+    <div className="page-container py-10">
+      <h1 className="section-heading">Your cart</h1>
       {error && <p className="field-error mt-2">{error}</p>}
       <div className="mt-6 space-y-4">
         {items.map((i) => (
@@ -61,11 +61,11 @@ export default function Cart() {
             <img
               src={i.image_url || "https://placehold.co/96x96?text=No+Image"}
               alt={i.name}
-              className="h-20 w-20 rounded-lg object-cover"
+              className="h-20 w-20 rounded-md object-cover"
             />
             <div className="min-w-[140px] flex-1">
-              <p className="font-semibold text-gray-900">{i.name}</p>
-              <p className="text-sm text-gray-500">${i.price.toFixed(2)} each</p>
+              <p className="font-semibold text-ink-950">{i.name}</p>
+              <p className="text-sm text-ink-500">${i.price.toFixed(2)} each</p>
             </div>
             <input
               type="number"
@@ -77,9 +77,7 @@ export default function Cart() {
                 updateQuantity(i.product_id, Math.max(1, Number(e.target.value) || 1))
               }
             />
-            <p className="w-24 text-right font-semibold text-gray-900">
-              ${(i.price * i.quantity).toFixed(2)}
-            </p>
+            <p className="price w-24 text-right">${(i.price * i.quantity).toFixed(2)}</p>
             <button className="btn-secondary" onClick={() => removeItem(i.product_id)}>
               Remove
             </button>
@@ -87,7 +85,7 @@ export default function Cart() {
         ))}
       </div>
       <div className="card mt-6 flex flex-wrap items-center justify-between gap-3">
-        <span className="text-lg font-bold text-gray-900">Total: ${total.toFixed(2)}</span>
+        <span className="price text-xl">Total: ${total.toFixed(2)}</span>
         <button className="btn-primary" disabled={placing} onClick={handleCheckout}>
           {placing ? "Placing order..." : "Checkout"}
         </button>

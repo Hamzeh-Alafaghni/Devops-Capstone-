@@ -7,12 +7,21 @@ import Pagination from "../components/Pagination.jsx";
 
 const SORT_OPTIONS = [
   { value: "newest", label: "Newest" },
-  { value: "price_asc", label: "Price: Low to High" },
-  { value: "price_desc", label: "Price: High to Low" },
-  { value: "name", label: "Name (A-Z)" },
+  { value: "price_asc", label: "Price: low to high" },
+  { value: "price_desc", label: "Price: high to low" },
+  { value: "name", label: "Name: A-Z" },
 ];
 
 const PAGE_SIZE = 12;
+
+function SearchIcon({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M20 20l-3.8-3.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 export default function Catalog() {
   const [products, setProducts] = useState([]);
@@ -62,65 +71,102 @@ export default function Catalog() {
   }, [debouncedSearch, category, sort, page]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Shop products</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            {total} item{total === 1 ? "" : "s"} available
+    <div>
+      {/* Hero */}
+      <div className="relative overflow-hidden border-b border-ink-200 bg-ink-950">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
+        <div className="page-container relative z-10 py-16 sm:py-20">
+          <p className="text-xs font-medium uppercase tracking-wide text-brand-300">
+            New arrivals every week
+          </p>
+          <h1 className="mt-3 max-w-xl text-4xl font-semibold leading-[1.1] tracking-tightish text-white sm:text-5xl">
+            Everything you need, nothing you don't.
+          </h1>
+          <p className="mt-4 max-w-md text-[15px] text-ink-300">
+            {total} item{total === 1 ? "" : "s"} ready to ship today.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <input
-            className="input-field sm:w-56"
-            placeholder="Search products..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <select
-            className="input-field sm:w-44"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          >
-            <option value="">All categories</option>
+      </div>
+
+      <div className="page-container py-8">
+        {/* Toolbar */}
+        <div className="sticky top-14 z-10 -mx-4 border-b border-ink-200 bg-white/95 px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full sm:w-64">
+              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+              <input
+                className="input-field pl-9"
+                placeholder="Search products..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <select
+              className="input-field w-full sm:w-48"
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+            >
+              {SORT_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                category === ""
+                  ? "border-ink-950 bg-ink-950 text-white"
+                  : "border-ink-200 text-ink-600 hover:border-ink-300"
+              }`}
+              onClick={() => setCategory("")}
+            >
+              All
+            </button>
             {categories.map((c) => (
-              <option key={c} value={c}>
+              <button
+                key={c}
+                className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition ${
+                  category === c
+                    ? "border-ink-950 bg-ink-950 text-white"
+                    : "border-ink-200 text-ink-600 hover:border-ink-300"
+                }`}
+                onClick={() => setCategory(c)}
+              >
                 {c}
-              </option>
+              </button>
             ))}
-          </select>
-          <select
-            className="input-field sm:w-44"
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-          >
-            {SORT_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+          </div>
         </div>
-      </div>
 
-      {error && <p className="field-error mt-4">{error}</p>}
+        {error && <p className="field-error mt-4">{error}</p>}
 
-      <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {loading
-          ? Array.from({ length: 6 }).map((_, i) => <ProductCardSkeleton key={i} />)
-          : products.map((p) => <ProductCard key={p.id} product={p} />)}
-      </div>
-
-      {!loading && products.length === 0 && !error && (
-        <div className="mt-6">
-          <EmptyState
-            title="No products found"
-            description="Try adjusting your search or filters."
-          />
+        <div className="mt-8 grid grid-cols-2 gap-x-5 gap-y-9 sm:grid-cols-3 lg:grid-cols-4">
+          {loading
+            ? Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)
+            : products.map((p) => <ProductCard key={p.id} product={p} />)}
         </div>
-      )}
 
-      {!loading && <Pagination page={page} totalPages={totalPages} onChange={setPage} />}
+        {!loading && products.length === 0 && !error && (
+          <div className="mt-6">
+            <EmptyState
+              title="No products found"
+              description="Try adjusting your search or filters."
+            />
+          </div>
+        )}
+
+        {!loading && <Pagination page={page} totalPages={totalPages} onChange={setPage} />}
+      </div>
     </div>
   );
 }

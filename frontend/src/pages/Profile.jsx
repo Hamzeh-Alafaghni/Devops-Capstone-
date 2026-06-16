@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { updateProfile, changePassword } from "../api/auth.js";
 
 export default function Profile() {
-  const { user, token, refreshProfile } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const [email, setEmail] = useState(user?.email || "");
   const [fullName, setFullName] = useState(user?.full_name || "");
   const [address, setAddress] = useState(user?.address || "");
@@ -18,7 +18,7 @@ export default function Profile() {
     e.preventDefault();
     setSavingProfile(true);
     try {
-      await updateProfile(token, { email, full_name: fullName, address });
+      await updateProfile({ email, full_name: fullName, address });
       await refreshProfile();
       toast.success("Profile updated");
     } catch (err) {
@@ -32,10 +32,10 @@ export default function Profile() {
     e.preventDefault();
     setSavingPassword(true);
     try {
-      await changePassword(token, currentPassword, newPassword);
+      await changePassword(currentPassword, newPassword);
       setCurrentPassword("");
       setNewPassword("");
-      toast.success("Password changed");
+      toast.success("Password changed. Please log in again on other devices.");
     } catch (err) {
       toast.error(err?.response?.data?.error || "Could not change password");
     } finally {
@@ -44,14 +44,14 @@ export default function Profile() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900">My profile</h1>
+    <div className="mx-auto max-w-2xl space-y-6 px-4 py-10 sm:px-6 lg:px-8">
+      <h1 className="section-heading">My profile</h1>
 
       <div className="card">
-        <h2 className="font-semibold text-gray-900">Account details</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Username: <span className="font-medium text-gray-700">{user?.username}</span> &middot;
-          Role: <span className="font-medium text-gray-700">{user?.role}</span>
+        <h2 className="font-semibold text-ink-950">Account details</h2>
+        <p className="mt-1 text-sm text-ink-500">
+          Username: <span className="font-medium text-ink-700">{user?.username}</span> &middot;{" "}
+          Role: <span className="font-medium text-ink-700">{user?.role}</span>
         </p>
         <form className="mt-4 space-y-4" onSubmit={handleProfileSubmit}>
           <div>
@@ -87,7 +87,10 @@ export default function Profile() {
       </div>
 
       <div className="card">
-        <h2 className="font-semibold text-gray-900">Change password</h2>
+        <h2 className="font-semibold text-ink-950">Change password</h2>
+        <p className="field-hint mt-1">
+          Changing your password signs you out everywhere else.
+        </p>
         <form className="mt-4 space-y-4" onSubmit={handlePasswordSubmit}>
           <div>
             <label className="field-label">Current password</label>

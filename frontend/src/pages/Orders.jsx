@@ -16,7 +16,7 @@ export default function Orders() {
 
   function load() {
     setLoading(true);
-    listOrders(token)
+    listOrders()
       .then(setOrders)
       .catch(() => setError("Could not load orders. Is orders-service running on :5003?"))
       .finally(() => setLoading(false));
@@ -30,7 +30,7 @@ export default function Orders() {
   async function handleCancel(id) {
     setCancellingId(id);
     try {
-      await cancelOrder(token, id);
+      await cancelOrder(id);
       toast.success("Order cancelled");
       load();
     } catch (err) {
@@ -41,8 +41,8 @@ export default function Orders() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900">My orders</h1>
+    <div className="page-container py-10">
+      <h1 className="section-heading">My orders</h1>
       {error && <p className="field-error mt-2">{error}</p>}
       <div className="mt-6 space-y-4">
         {loading && Array.from({ length: 3 }).map((_, i) => <OrderSkeleton key={i} />)}
@@ -62,14 +62,14 @@ export default function Orders() {
             <div key={o.id} className="card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-semibold text-gray-900">Order #{o.id}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="font-semibold text-ink-950">Order #{o.id}</p>
+                  <p className="text-xs text-ink-400">
                     {new Date(o.created_at).toLocaleString()}
                   </p>
                 </div>
                 <StatusBadge status={o.status} />
               </div>
-              <ul className="mt-3 divide-y divide-gray-100 text-sm">
+              <ul className="mt-3 divide-y divide-ink-200 text-sm">
                 {o.items.map((i, idx) => (
                   <li key={idx} className="flex justify-between py-1.5">
                     <span>
@@ -80,7 +80,7 @@ export default function Orders() {
                 ))}
               </ul>
               <div className="mt-3 flex items-center justify-between">
-                <span className="font-bold text-gray-900">Total: ${o.total.toFixed(2)}</span>
+                <span className="price">Total: ${o.total.toFixed(2)}</span>
                 {o.status === "pending" && (
                   <button
                     className="btn-danger"

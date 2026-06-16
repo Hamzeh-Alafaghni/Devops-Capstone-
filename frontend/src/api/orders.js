@@ -1,49 +1,31 @@
-import { ordersClient, authHeader } from "./client.js";
+import { apiClient } from "./client.js";
 
-export async function createOrder(token, items) {
-  const res = await ordersClient.post(
-    "/api/orders",
-    { items },
-    { headers: authHeader(token) }
-  );
+export async function createOrder(items) {
+  const res = await apiClient.post("/api/orders", { items });
   return res.data;
 }
 
-export async function listOrders(token) {
-  const res = await ordersClient.get("/api/orders", {
-    headers: authHeader(token),
-  });
+export async function listOrders() {
+  const res = await apiClient.get("/api/orders");
   return res.data;
 }
 
-export async function getOrder(token, id) {
-  const res = await ordersClient.get(`/api/orders/${id}`, {
-    headers: authHeader(token),
-  });
+export async function getOrder(id) {
+  const res = await apiClient.get(`/api/orders/${id}`);
   return res.data;
 }
 
-export async function cancelOrder(token, id) {
-  const res = await ordersClient.patch(
-    `/api/orders/${id}/cancel`,
-    {},
-    { headers: authHeader(token) }
-  );
+export async function cancelOrder(id) {
+  const res = await apiClient.patch(`/api/orders/${id}/cancel`, {});
   return res.data;
 }
 
-export async function listAllOrders(token) {
-  const res = await ordersClient.get("/api/orders/all", {
-    headers: authHeader(token),
-  });
+export async function listAllOrders() {
+  const res = await apiClient.get("/api/orders/all");
   return res.data;
 }
 
-export async function updateOrderStatus(token, id, status) {
-  const res = await ordersClient.patch(
-    `/api/orders/${id}/status`,
-    { status },
-    { headers: authHeader(token) }
-  );
+export async function updateOrderStatus(id, status) {
+  const res = await apiClient.patch(`/api/orders/${id}/status`, { status });
   return res.data;
 }

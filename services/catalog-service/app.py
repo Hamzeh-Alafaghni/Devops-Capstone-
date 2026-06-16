@@ -26,6 +26,7 @@ app = Flask(__name__)
 
 DB_PATH = os.environ.get("CATALOG_DB_PATH", os.path.join(os.path.dirname(__file__), "catalog.db"))
 SHARED_SECRET = os.environ.get("SHARED_SECRET", "dev-shared-secret-change-me")
+CORS_ALLOWED_ORIGIN = os.environ.get("CORS_ALLOWED_ORIGIN", "http://localhost:5173")
 
 SORT_COLUMNS = {
     "price_asc": "price ASC",
@@ -51,10 +52,15 @@ SEED_PRODUCTS = [
 
 
 @app.after_request
-def add_cors_headers(response):
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+def add_security_and_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = CORS_ALLOWED_ORIGIN
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-CSRF-Token"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Vary"] = "Origin"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     return response
 
 

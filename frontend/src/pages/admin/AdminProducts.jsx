@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { useAuth } from "../../context/AuthContext.jsx";
 import { listProducts, createProduct, updateProduct, deleteProduct } from "../../api/catalog.js";
 
 const EMPTY_FORM = {
@@ -13,7 +12,6 @@ const EMPTY_FORM = {
 };
 
 export default function AdminProducts() {
-  const { token } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -59,10 +57,10 @@ export default function AdminProducts() {
     };
     try {
       if (editingId) {
-        await updateProduct(token, editingId, payload);
+        await updateProduct(editingId, payload);
         toast.success("Product updated");
       } else {
-        await createProduct(token, payload);
+        await createProduct(payload);
         toast.success("Product created");
       }
       resetForm();
@@ -77,7 +75,7 @@ export default function AdminProducts() {
   async function handleDelete(id) {
     if (!window.confirm("Delete this product?")) return;
     try {
-      await deleteProduct(token, id);
+      await deleteProduct(id);
       toast.success("Product deleted");
       load();
     } catch (err) {
@@ -86,11 +84,11 @@ export default function AdminProducts() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900">Manage products</h1>
+    <div className="page-container py-10">
+      <h1 className="section-heading">Manage products</h1>
       <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_3fr]">
         <form className="card h-fit space-y-4" onSubmit={handleSubmit}>
-          <h2 className="font-semibold text-gray-900">
+          <h2 className="font-semibold text-ink-950">
             {editingId ? "Edit product" : "New product"}
           </h2>
           <div>
@@ -165,7 +163,7 @@ export default function AdminProducts() {
         </form>
 
         <div className="space-y-3">
-          {loading && <p className="text-sm text-gray-500">Loading products...</p>}
+          {loading && <p className="text-sm text-ink-500">Loading products...</p>}
           {!loading &&
             products.map((p) => (
               <div key={p.id} className="card flex flex-wrap items-center gap-4">
@@ -175,15 +173,15 @@ export default function AdminProducts() {
                   className="h-14 w-14 rounded-lg object-cover"
                 />
                 <div className="min-w-[140px] flex-1">
-                  <p className="font-semibold text-gray-900">{p.name}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="font-semibold text-ink-950">{p.name}</p>
+                  <p className="text-xs text-ink-500">
                     {p.category} &middot; ${p.price.toFixed(2)} &middot; {p.stock} in stock
                   </p>
                 </div>
-                <button className="btn-secondary" onClick={() => startEdit(p)}>
+                <button className="btn-secondary btn-sm" onClick={() => startEdit(p)}>
                   Edit
                 </button>
-                <button className="btn-danger" onClick={() => handleDelete(p.id)}>
+                <button className="btn-danger btn-sm" onClick={() => handleDelete(p.id)}>
                   Delete
                 </button>
               </div>

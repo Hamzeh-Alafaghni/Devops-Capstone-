@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 const CartContext = createContext(null);
-const STORAGE_KEY = "capstone_cart";
+const STORAGE_KEY = "marketly_cart";
 
 export function CartProvider({ children }) {
   // items: [{ product_id, name, price, image_url, stock, quantity }]

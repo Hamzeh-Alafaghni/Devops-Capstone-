@@ -1,76 +1,56 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import * as authApi from "../api/auth.js";
+import { subscribe, getToken, getUser } from "../api/tokenStore.js";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem("capstone_token"));
-  const [user, setUser] = useState(() => {
-    try {
-      const raw = localStorage.getItem("capstone_user");
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [token, setTokenState] = useState(getToken());
+  const [user, setUserState] = useState(getUser());
   const [ready, setReady] = useState(false);
 
+  // The token store is the single source of truth (also written to by the
+  // axios interceptor's silent refresh) — this just mirrors it into React
+  // state so components re-render when it changes.
   useEffect(() => {
-    if (token) {
-      localStorage.setItem("capstone_token", token);
-    } else {
-      localStorage.removeItem("capstone_token");
-    }
-  }, [token]);
+    return subscribe(({ token: t, user: u }) => {
+      setTokenState(t);
+      setUserState(u);
+    });
+  }, []);
 
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem("capstone_user", JSON.stringify(user));
-    } else {
-      localStorage.removeItem("capstone_user");
-    }
-  }, [user]);
-
-  // On first load, re-validate the stored token against auth-service and
-  // refresh the user profile (covers role changes, profile edits, etc).
+  // On first load there's no access token in memory (by design — it's
+  // never persisted), so exchange the httpOnly refresh-token cookie for a
+  // new one. If there's no valid cookie either, the user is simply logged
+  // out, which is the correct "first visit" state.
   useEffect(() => {
     async function bootstrap() {
-      if (token) {
-        try {
-          const profile = await authApi.me(token);
-          setUser(profile);
-        } catch {
-          setToken(null);
-          setUser(null);
-        }
+      try {
+        await authApi.refresh();
+      } catch {
+        // No valid session — nothing to do, ready=true below reflects "logged out".
+      } finally {
+        setReady(true);
       }
-      setReady(true);
     }
     bootstrap();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function login(username, password) {
-    const data = await authApi.login(username, password);
-    setToken(data.token);
-    setUser(data.user);
+    await authApi.login(username, password);
   }
 
   async function register(username, password, email) {
-    const data = await authApi.register({ username, password, email });
-    setToken(data.token);
-    setUser(data.user);
+    await authApi.register({ username, password, email });
   }
 
-  function logout() {
-    setToken(null);
-    setUser(null);
+  async function logout() {
+    await authApi.logout();
   }
 
   async function refreshProfile() {
-    if (!token) return;
-    const profile = await authApi.me(token);
-    setUser(profile);
+    const profile = await authApi.me();
+    setUserState(profile);
   }
 
   const value = {

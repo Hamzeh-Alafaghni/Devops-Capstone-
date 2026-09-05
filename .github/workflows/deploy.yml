@@ -28,7 +28,7 @@ jobs:
 
       - name: Build and Push Catalog
         run: |
-          docker build -t 678419966897.dkr.ecr.us-east-1.amazonaws.com/devops-catalog:latest ./catalog
+          docker build -t 678419966897.dkr.ecr.us-east-1.amazonaws.com/devops-catalog:latest ./services/catalog
           docker push 678419966897.dkr.ecr.us-east-1.amazonaws.com/devops-catalog:latest
 
       - name: Build and Push Frontend

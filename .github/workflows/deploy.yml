@@ -1,0 +1,37 @@
+name: Build and Push to ECR
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::678419966897:role/github-actions-ecr-deploy
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push Catalog
+        run: |
+          docker build -t 678419966897.dkr.ecr.us-east-1.amazonaws.com/devops-catalog:latest ./catalog
+          docker push 678419966897.dkr.ecr.us-east-1.amazonaws.com/devops-catalog:latest
+
+      - name: Build and Push Frontend
+        run: |
+          docker build -t 678419966897.dkr.ecr.us-east-1.amazonaws.com/devops-frontend:latest ./frontend
+          docker push 678419966897.dkr.ecr.us-east-1.amazonaws.com/devops-frontend:latest

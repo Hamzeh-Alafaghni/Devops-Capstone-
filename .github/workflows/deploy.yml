@@ -16,6 +16,9 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -27,11 +30,15 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and Push Catalog
-        run: |
-          docker build -t 678419966897.dkr.ecr.us-east-1.amazonaws.com/devops-catalog:latest ./services/catalog
-          docker push 678419966897.dkr.ecr.us-east-1.amazonaws.com/devops-catalog:latest
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/catalog
+          push: true
+          tags: 678419966897.dkr.ecr.us-east-1.amazonaws.com/devops-catalog:latest
 
       - name: Build and Push Frontend
-        run: |
-          docker build -t 678419966897.dkr.ecr.us-east-1.amazonaws.com/devops-frontend:latest ./frontend
-          docker push 678419966897.dkr.ecr.us-east-1.amazonaws.com/devops-frontend:latest
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: 678419966897.dkr.ecr.us-east-1.amazonaws.com/devops-frontend:latest

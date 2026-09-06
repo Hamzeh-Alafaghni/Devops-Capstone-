@@ -32,7 +32,7 @@ jobs:
       - name: Build and Push Catalog
         uses: docker/build-push-action@v5
         with:
-          context: ./services/catalog
+          context: ./services/catalog-service
           push: true
           tags: 678419966897.dkr.ecr.us-east-1.amazonaws.com/devops-catalog:latest
 

@@ -1,0 +1,38 @@
+name: Terraform Pipeline
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'terraform/**'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'terraform/**'
+permissions:
+  id-token: write
+  contents: read
+env:
+  AWS_REGION: "us-east-1"
+  ROLE_ARN: "arn:aws:iam::678419966897:role/github-actions-oidc-role"
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./terraform
+    steps:
+    - uses: actions/checkout@v3
+    - name: Configure AWS credentials via OIDC
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        role-to-assume: ${{ env.ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+    - name: Terraform Init
+      run: terraform init
+    - name: Terraform Plan
+      run: terraform plan
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: terraform apply -auto-approve

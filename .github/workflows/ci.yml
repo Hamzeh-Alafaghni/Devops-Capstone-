@@ -1,0 +1,44 @@
+name: CI - Build and Push
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+permissions:
+  id-token: write
+  contents: read
+env:
+  AWS_REGION: "us-east-1"
+  AWS_ACCOUNT_ID: "678419966897"
+  ROLE_ARN: "arn:aws:iam::678419966897:role/github-actions-oidc-role"
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Configure AWS credentials via OIDC
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        role-to-assume: ${{ env.ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+    - name: Build and push images
+      if: github.event_name == 'push'
+      run: |
+        # Auth
+        docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/devops-auth:latest ./services/auth-service
+        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/devops-auth:latest
+        
+        # Catalog
+        docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/devops-catalog:latest ./services/catalog-service
+        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/devops-catalog:latest
+        
+        # Orders
+        docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/devops-orders:latest ./services/orders-service
+        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/devops-orders:latest
+        
+        # Frontend
+        docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/devops-frontend:latest ./frontend
+        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/devops-frontend:latest

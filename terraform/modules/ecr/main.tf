@@ -1,19 +1,5 @@
-resource "aws_ecr_repository" "frontend" {
-  name         = "devops-frontend"
-  force_delete = true
-}
-
-resource "aws_ecr_repository" "catalog" {
-  name         = "devops-catalog"
-  force_delete = true
-}
-
-resource "aws_ecr_repository" "orders" {
-  name         = "devops-orders"
-  force_delete = true
-}
-
-resource "aws_ecr_repository" "auth" {
-  name         = "devops-auth"
+resource "aws_ecr_repository" "repos" {
+  for_each     = toset(["devops-auth", "devops-catalog", "devops-orders", "devops-frontend"])
+  name         = each.key
   force_delete = true
 }

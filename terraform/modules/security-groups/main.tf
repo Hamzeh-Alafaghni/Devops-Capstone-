@@ -1,3 +1,6 @@
+variable "vpc_id" {}
+variable "vpc_cidr" {}
+
 resource "aws_security_group" "alb_sg" {
   name   = "alb-sg"
   vpc_id = var.vpc_id
@@ -8,14 +11,6 @@ resource "aws_security_group" "alb_sg" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -34,14 +29,12 @@ resource "aws_security_group" "k3s_sg" {
     protocol        = "tcp"
     security_groups = [aws_security_group.alb_sg.id]
   }
-
   ingress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "-1"
-    self      = true
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    self        = true
   }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -60,13 +53,6 @@ resource "aws_security_group" "rds_sg" {
     protocol        = "tcp"
     security_groups = [aws_security_group.k3s_sg.id]
   }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 }
 
 resource "aws_security_group" "nat_sg" {
@@ -77,9 +63,8 @@ resource "aws_security_group" "nat_sg" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["10.0.0.0/16"]
+    cidr_blocks = [var.vpc_cidr]
   }
-
   egress {
     from_port   = 0
     to_port     = 0

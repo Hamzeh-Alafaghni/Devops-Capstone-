@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: marketly
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+    ports:
+      - "5001:5001"
+    environment:
+      - DATABASE_URL=postgresql://admin:password@postgres:5432/marketly
+      - SHARED_SECRET=super_secret_key_for_jwt
+    depends_on:
+      - postgres
+
+  catalog-service:
+    build:
+      context: ./services/catalog-service
+    ports:
+      - "5002:5002"
+    environment:
+      - DATABASE_URL=postgresql://admin:password@postgres:5432/marketly
+    depends_on:
+      - postgres
+
+  orders-service:
+    build:
+      context: ./services/orders-service
+    ports:
+      - "5003:5003"
+    environment:
+      - DATABASE_URL=postgresql://admin:password@postgres:5432/marketly
+      - SHARED_SECRET=super_secret_key_for_jwt
+      - CATALOG_URL=http://catalog-service:5002
+    depends_on:
+      - postgres
+      - catalog-service
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - auth-service
+      - catalog-service
+      - orders-service
+
+volumes:
+  pgdata:

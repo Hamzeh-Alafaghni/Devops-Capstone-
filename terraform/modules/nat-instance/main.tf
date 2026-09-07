@@ -1,4 +1,8 @@
-data "aws_ami" "amazon_linux_2023" {
+variable "public_subnet_id" {}
+variable "nat_sg_id" {}
+variable "private_route_table_id" {}
+
+data "aws_ami" "amazon_linux" {
   most_recent = true
   owners      = ["amazon"]
   filter {
@@ -8,23 +12,15 @@ data "aws_ami" "amazon_linux_2023" {
 }
 
 resource "aws_instance" "nat" {
-  ami                    = data.aws_ami.amazon_linux_2023.id
+  ami                    = data.aws_ami.amazon_linux.id
   instance_type          = "t3.micro"
   subnet_id              = var.public_subnet_id
   vpc_security_group_ids = [var.nat_sg_id]
-  source_dest_check      = false # Crucial for NAT to work
-
-  user_data = <<-SCRIPT
-              #!/bin/bash
-              echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
-              sysctl -p
-              iptables -t nat -A POSTROUTING -o ens5 -j MASQUERADE
-              SCRIPT
-
-  tags = { Name = "devops-capstone-nat" }
+  source_dest_check      = false
+  tags = { Name = "nat-instance" }
 }
 
-resource "aws_route" "private_nat_gateway" {
+resource "aws_route" "private_nat" {
   route_table_id         = var.private_route_table_id
   destination_cidr_block = "0.0.0.0/0"
   network_interface_id   = aws_instance.nat.primary_network_interface_id

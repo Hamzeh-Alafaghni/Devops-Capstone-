@@ -25,7 +25,8 @@ Listens on :5001
 """
 import os
 import re
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import secrets
 import hashlib
 import datetime
@@ -148,8 +149,8 @@ def cors_preflight(_unused):
 # --- DB ---
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(os.environ.get("DATABASE_URL"))
+    conn.cursor_factory = psycopg2.extras.DictCursor
     return conn
 
 
@@ -158,7 +159,7 @@ def init_db():
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             email TEXT,
@@ -172,7 +173,7 @@ def init_db():
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS refresh_tokens (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             user_id INTEGER NOT NULL,
             token_hash TEXT UNIQUE NOT NULL,
             created_at TEXT NOT NULL,
@@ -184,13 +185,13 @@ def init_db():
     conn.commit()
 
     existing = conn.execute(
-        "SELECT id FROM users WHERE username = ?", (ADMIN_SEED_USERNAME,)
+        "SELECT id FROM users WHERE username = %s", (ADMIN_SEED_USERNAME,)
     ).fetchone()
     if not existing:
         conn.execute(
             """
             INSERT INTO users (username, password_hash, email, full_name, address, role, created_at)
-            VALUES (?, ?, ?, ?, ?, 'admin', ?)
+            VALUES (%s, %s, %s, %s, %s, 'admin', %s)
             """,
             (
                 ADMIN_SEED_USERNAME,
@@ -204,13 +205,13 @@ def init_db():
         conn.commit()
 
     existing_demo = conn.execute(
-        "SELECT id FROM users WHERE username = ?", (DEMO_SEED_USERNAME,)
+        "SELECT id FROM users WHERE username = %s", (DEMO_SEED_USERNAME,)
     ).fetchone()
     if not existing_demo:
         conn.execute(
             """
             INSERT INTO users (username, password_hash, email, full_name, address, role, created_at)
-            VALUES (?, ?, ?, ?, ?, 'customer', ?)
+            VALUES (%s, %s, %s, %s, %s, 'customer', %s)
             """,
             (
                 DEMO_SEED_USERNAME,
@@ -260,7 +261,7 @@ def issue_refresh_token(conn, user_id):
     now = datetime.datetime.utcnow()
     expires_at = now + datetime.timedelta(days=REFRESH_TOKEN_EXP_DAYS)
     conn.execute(
-        "INSERT INTO refresh_tokens (user_id, token_hash, created_at, expires_at) VALUES (?, ?, ?, ?)",
+        "INSERT INTO refresh_tokens (user_id, token_hash, created_at, expires_at) VALUES (%s, %s, %s, %s)",
         (user_id, _hash_token(raw_token), now.isoformat(), expires_at.isoformat()),
     )
     conn.commit()
@@ -269,7 +270,7 @@ def issue_refresh_token(conn, user_id):
 
 def revoke_refresh_token(conn, token_hash):
     conn.execute(
-        "UPDATE refresh_tokens SET revoked_at = ? WHERE token_hash = ? AND revoked_at IS NULL",
+        "UPDATE refresh_tokens SET revoked_at = %s WHERE token_hash = %s AND revoked_at IS NULL",
         (datetime.datetime.utcnow().isoformat(), token_hash),
     )
     conn.commit()
@@ -280,7 +281,7 @@ def find_valid_refresh_token(conn, raw_token):
         return None
     token_hash = _hash_token(raw_token)
     row = conn.execute(
-        "SELECT * FROM refresh_tokens WHERE token_hash = ?", (token_hash,)
+        "SELECT * FROM refresh_tokens WHERE token_hash = %s", (token_hash,)
     ).fetchone()
     if not row:
         return None
@@ -372,7 +373,7 @@ def register():
         return jsonify(error="validation failed", fields=errors), 400
 
     conn = get_db()
-    existing = conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+    existing = conn.execute("SELECT id FROM users WHERE username = %s", (username,)).fetchone()
     if existing:
         conn.close()
         return jsonify(error="username already taken", fields={"username": "already taken"}), 409
@@ -381,12 +382,12 @@ def register():
     conn.execute(
         """
         INSERT INTO users (username, password_hash, email, full_name, address, role, created_at)
-        VALUES (?, ?, ?, ?, '', 'customer', ?)
+        VALUES (%s, %s, %s, %s, '', 'customer', %s)
         """,
         (username, password_hash, email, full_name, datetime.datetime.utcnow().isoformat()),
     )
     conn.commit()
-    row = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+    row = conn.execute("SELECT * FROM users WHERE username = %s", (username,)).fetchone()
 
     raw_refresh, expires_at = issue_refresh_token(conn, row["id"])
     conn.close()
@@ -414,7 +415,7 @@ def login():
             )
 
     conn = get_db()
-    user = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+    user = conn.execute("SELECT * FROM users WHERE username = %s", (username,)).fetchone()
 
     if not user or not check_password_hash(user["password_hash"], password):
         conn.close()
@@ -443,7 +444,7 @@ def refresh():
         conn.close()
         return jsonify(error="missing or expired refresh token"), 401
 
-    user = conn.execute("SELECT * FROM users WHERE id = ?", (row["user_id"],)).fetchone()
+    user = conn.execute("SELECT * FROM users WHERE id = %s", (row["user_id"],)).fetchone()
     if not user:
         conn.close()
         return jsonify(error="user not found"), 404
@@ -482,7 +483,7 @@ def me():
         return jsonify(error="missing or invalid bearer token"), 401
 
     conn = get_db()
-    row = conn.execute("SELECT * FROM users WHERE id = ?", (payload["uid"],)).fetchone()
+    row = conn.execute("SELECT * FROM users WHERE id = %s", (payload["uid"],)).fetchone()
     conn.close()
     if not row:
         return jsonify(error="user not found"), 404
@@ -504,7 +505,7 @@ def update_profile():
         return jsonify(error="validation failed", fields={"email": "email is not a valid address"}), 400
 
     conn = get_db()
-    row = conn.execute("SELECT * FROM users WHERE id = ?", (payload["uid"],)).fetchone()
+    row = conn.execute("SELECT * FROM users WHERE id = %s", (payload["uid"],)).fetchone()
     if not row:
         conn.close()
         return jsonify(error="user not found"), 404
@@ -512,15 +513,15 @@ def update_profile():
     conn.execute(
         """
         UPDATE users SET
-            email = COALESCE(?, email),
-            full_name = COALESCE(?, full_name),
-            address = COALESCE(?, address)
-        WHERE id = ?
+            email = COALESCE(%s, email),
+            full_name = COALESCE(%s, full_name),
+            address = COALESCE(%s, address)
+        WHERE id = %s
         """,
         (email, full_name, address, payload["uid"]),
     )
     conn.commit()
-    row = conn.execute("SELECT * FROM users WHERE id = ?", (payload["uid"],)).fetchone()
+    row = conn.execute("SELECT * FROM users WHERE id = %s", (payload["uid"],)).fetchone()
     conn.close()
     return jsonify(user_to_dict(row)), 200
 
@@ -539,20 +540,20 @@ def change_password():
         return jsonify(error="validation failed", fields={"new_password": "must be at least 6 characters"}), 400
 
     conn = get_db()
-    row = conn.execute("SELECT * FROM users WHERE id = ?", (payload["uid"],)).fetchone()
+    row = conn.execute("SELECT * FROM users WHERE id = %s", (payload["uid"],)).fetchone()
     if not row or not check_password_hash(row["password_hash"], current_password):
         conn.close()
         return jsonify(error="current password is incorrect"), 401
 
     conn.execute(
-        "UPDATE users SET password_hash = ? WHERE id = ?",
+        "UPDATE users SET password_hash = %s WHERE id = %s",
         (generate_password_hash(new_password), payload["uid"]),
     )
     conn.commit()
     # Changing the password invalidates all existing refresh tokens for this
     # user — a stolen-but-not-yet-used refresh token becomes worthless too.
     conn.execute(
-        "UPDATE refresh_tokens SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL",
+        "UPDATE refresh_tokens SET revoked_at = %s WHERE user_id = %s AND revoked_at IS NULL",
         (datetime.datetime.utcnow().isoformat(), payload["uid"]),
     )
     conn.commit()

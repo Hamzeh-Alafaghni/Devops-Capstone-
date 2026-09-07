@@ -16,7 +16,8 @@ Run standalone:
 Listens on :5002
 """
 import os
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import math
 
 import jwt
@@ -73,8 +74,8 @@ def cors_preflight(_unused=None):
 
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(os.environ.get("DATABASE_URL"))
+    conn.cursor_factory = psycopg2.extras.DictCursor
     return conn
 
 
@@ -83,7 +84,7 @@ def init_db():
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS products (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
             description TEXT,
             price REAL NOT NULL,
@@ -103,7 +104,7 @@ def init_db():
     count = conn.execute("SELECT COUNT(*) AS c FROM products").fetchone()["c"]
     if count == 0:
         conn.executemany(
-            "INSERT INTO products (name, description, price, stock, category, image_url) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO products (name, description, price, stock, category, image_url) VALUES (%s, %s, %s, %s, %s, %s)",
             SEED_PRODUCTS,
         )
     conn.commit()
@@ -167,10 +168,10 @@ def list_products():
     where = []
     params = []
     if q:
-        where.append("(name LIKE ? OR description LIKE ?)")
+        where.append("(name LIKE %s OR description LIKE %s)")
         params += [f"%{q}%", f"%{q}%"]
     if category:
-        where.append("category = ?")
+        where.append("category = %s")
         params.append(category)
     where_sql = f"WHERE {' AND '.join(where)}" if where else ""
     order_sql = SORT_COLUMNS.get(sort, SORT_COLUMNS["newest"])
@@ -178,7 +179,7 @@ def list_products():
     conn = get_db()
     total = conn.execute(f"SELECT COUNT(*) AS c FROM products {where_sql}", params).fetchone()["c"]
     rows = conn.execute(
-        f"SELECT * FROM products {where_sql} ORDER BY {order_sql} LIMIT ? OFFSET ?",
+        f"SELECT * FROM products {where_sql} ORDER BY {order_sql} LIMIT %s OFFSET %s",
         params + [page_size, (page - 1) * page_size],
     ).fetchall()
     conn.close()
@@ -195,7 +196,7 @@ def list_products():
 @app.route("/api/products/<int:product_id>", methods=["GET"])
 def get_product(product_id):
     conn = get_db()
-    row = conn.execute("SELECT * FROM products WHERE id = ?", (product_id,)).fetchone()
+    row = conn.execute("SELECT * FROM products WHERE id = %s", (product_id,)).fetchone()
     conn.close()
     if not row:
         return jsonify(error="product not found"), 404
@@ -217,7 +218,7 @@ def create_product():
 
     conn = get_db()
     cur = conn.execute(
-        "INSERT INTO products (name, description, price, stock, category, image_url) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO products (name, description, price, stock, category, image_url) VALUES (%s, %s, %s, %s, %s, %s)",
         (
             name,
             data.get("description", ""),
@@ -229,7 +230,7 @@ def create_product():
     )
     conn.commit()
     new_id = cur.lastrowid
-    row = conn.execute("SELECT * FROM products WHERE id = ?", (new_id,)).fetchone()
+    row = conn.execute("SELECT * FROM products WHERE id = %s", (new_id,)).fetchone()
     conn.close()
     return jsonify(row_to_dict(row)), 201
 
@@ -240,7 +241,7 @@ def update_product(product_id):
         return jsonify(error="admin role required"), 403
 
     conn = get_db()
-    row = conn.execute("SELECT * FROM products WHERE id = ?", (product_id,)).fetchone()
+    row = conn.execute("SELECT * FROM products WHERE id = %s", (product_id,)).fetchone()
     if not row:
         conn.close()
         return jsonify(error="product not found"), 404
@@ -249,8 +250,8 @@ def update_product(product_id):
     conn.execute(
         """
         UPDATE products SET
-            name = ?, description = ?, price = ?, stock = ?, category = ?, image_url = ?
-        WHERE id = ?
+            name = %s, description = %s, price = %s, stock = %s, category = %s, image_url = %s
+        WHERE id = %s
         """,
         (
             data.get("name", row["name"]),
@@ -263,7 +264,7 @@ def update_product(product_id):
         ),
     )
     conn.commit()
-    row = conn.execute("SELECT * FROM products WHERE id = ?", (product_id,)).fetchone()
+    row = conn.execute("SELECT * FROM products WHERE id = %s", (product_id,)).fetchone()
     conn.close()
     return jsonify(row_to_dict(row)), 200
 
@@ -274,11 +275,11 @@ def delete_product(product_id):
         return jsonify(error="admin role required"), 403
 
     conn = get_db()
-    row = conn.execute("SELECT id FROM products WHERE id = ?", (product_id,)).fetchone()
+    row = conn.execute("SELECT id FROM products WHERE id = %s", (product_id,)).fetchone()
     if not row:
         conn.close()
         return jsonify(error="product not found"), 404
-    conn.execute("DELETE FROM products WHERE id = ?", (product_id,))
+    conn.execute("DELETE FROM products WHERE id = %s", (product_id,))
     conn.commit()
     conn.close()
     return jsonify(message="deleted"), 200
@@ -296,7 +297,7 @@ def adjust_stock(product_id):
         return jsonify(error="delta is required"), 400
 
     conn = get_db()
-    row = conn.execute("SELECT * FROM products WHERE id = ?", (product_id,)).fetchone()
+    row = conn.execute("SELECT * FROM products WHERE id = %s", (product_id,)).fetchone()
     if not row:
         conn.close()
         return jsonify(error="product not found"), 404
@@ -306,9 +307,9 @@ def adjust_stock(product_id):
         conn.close()
         return jsonify(error="insufficient stock"), 409
 
-    conn.execute("UPDATE products SET stock = ? WHERE id = ?", (new_stock, product_id))
+    conn.execute("UPDATE products SET stock = %s WHERE id = %s", (new_stock, product_id))
     conn.commit()
-    row = conn.execute("SELECT * FROM products WHERE id = ?", (product_id,)).fetchone()
+    row = conn.execute("SELECT * FROM products WHERE id = %s", (product_id,)).fetchone()
     conn.close()
     return jsonify(row_to_dict(row)), 200
 

@@ -16,7 +16,8 @@ Run standalone:
 Listens on :5003. Requires catalog-service running (default http://localhost:5002).
 """
 import os
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import datetime
 import json
 
@@ -57,8 +58,8 @@ def cors_preflight(_unused=None):
 
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(os.environ.get("DATABASE_URL"))
+    conn.cursor_factory = psycopg2.extras.DictCursor
     return conn
 
 
@@ -67,7 +68,7 @@ def init_db():
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS orders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             username TEXT NOT NULL,
             items_json TEXT NOT NULL,
             total REAL NOT NULL,
@@ -199,11 +200,11 @@ def create_order():
     now = datetime.datetime.utcnow().isoformat()
     conn = get_db()
     cur = conn.execute(
-        "INSERT INTO orders (username, items_json, total, status, created_at, updated_at) VALUES (?, ?, ?, 'pending', ?, ?)",
+        "INSERT INTO orders (username, items_json, total, status, created_at, updated_at) VALUES (%s, %s, %s, 'pending', %s, %s)",
         (username, json.dumps(order_items), total, now, now),
     )
     conn.commit()
-    row = conn.execute("SELECT * FROM orders WHERE id = ?", (cur.lastrowid,)).fetchone()
+    row = conn.execute("SELECT * FROM orders WHERE id = %s", (cur.lastrowid,)).fetchone()
     conn.close()
 
     return jsonify(order_to_dict(row)), 201
@@ -225,7 +226,7 @@ def list_orders():
 
     conn = get_db()
     rows = conn.execute(
-        "SELECT * FROM orders WHERE username = ? ORDER BY id DESC", (username,)
+        "SELECT * FROM orders WHERE username = %s ORDER BY id DESC", (username,)
     ).fetchall()
     conn.close()
     return jsonify([order_to_dict(r) for r in rows]), 200
@@ -238,7 +239,7 @@ def get_order(order_id):
         return jsonify(error="missing or invalid bearer token"), 401
 
     conn = get_db()
-    row = conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
+    row = conn.execute("SELECT * FROM orders WHERE id = %s", (order_id,)).fetchone()
     conn.close()
     if not row or row["username"] != username:
         return jsonify(error="order not found"), 404
@@ -252,7 +253,7 @@ def cancel_order(order_id):
         return jsonify(error="missing or invalid bearer token"), 401
 
     conn = get_db()
-    row = conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
+    row = conn.execute("SELECT * FROM orders WHERE id = %s", (order_id,)).fetchone()
     if not row or row["username"] != username:
         conn.close()
         return jsonify(error="order not found"), 404
@@ -267,9 +268,9 @@ def cancel_order(order_id):
             pass  # stock restore is best-effort; cancellation still proceeds
 
     now = datetime.datetime.utcnow().isoformat()
-    conn.execute("UPDATE orders SET status = 'cancelled', updated_at = ? WHERE id = ?", (now, order_id))
+    conn.execute("UPDATE orders SET status = 'cancelled', updated_at = %s WHERE id = %s", (now, order_id))
     conn.commit()
-    row = conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
+    row = conn.execute("SELECT * FROM orders WHERE id = %s", (order_id,)).fetchone()
     conn.close()
     return jsonify(order_to_dict(row)), 200
 
@@ -296,15 +297,15 @@ def set_order_status(order_id):
         return jsonify(error=f"status must be one of {VALID_STATUSES}"), 400
 
     conn = get_db()
-    row = conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
+    row = conn.execute("SELECT * FROM orders WHERE id = %s", (order_id,)).fetchone()
     if not row:
         conn.close()
         return jsonify(error="order not found"), 404
 
     now = datetime.datetime.utcnow().isoformat()
-    conn.execute("UPDATE orders SET status = ?, updated_at = ? WHERE id = ?", (new_status, now, order_id))
+    conn.execute("UPDATE orders SET status = %s, updated_at = %s WHERE id = %s", (new_status, now, order_id))
     conn.commit()
-    row = conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
+    row = conn.execute("SELECT * FROM orders WHERE id = %s", (order_id,)).fetchone()
     conn.close()
     return jsonify(order_to_dict(row)), 200
 

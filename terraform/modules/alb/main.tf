@@ -1,6 +1,3 @@
-variable "vpc_id" {}
-variable "public_subnet_ids" {}
-variable "alb_sg_id" {}
 
 resource "aws_lb" "main" {
   name               = "marketly-alb"
@@ -15,6 +12,10 @@ resource "aws_lb_target_group" "k3s" {
   port     = 30080
   protocol = "HTTP"
   vpc_id   = var.vpc_id
+  health_check {
+    path    = "/health"
+    matcher = "200"
+  }
 }
 
 resource "aws_lb_listener" "http" {
@@ -25,4 +26,9 @@ resource "aws_lb_listener" "http" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.k3s.arn
   }
+}
+
+resource "aws_autoscaling_attachment" "workers" {
+  autoscaling_group_name = var.asg_name
+  lb_target_group_arn    = aws_lb_target_group.k3s.arn
 }

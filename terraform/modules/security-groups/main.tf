@@ -1,5 +1,3 @@
-variable "vpc_id" {}
-variable "vpc_cidr" {}
 
 resource "aws_security_group" "alb_sg" {
   name   = "alb-sg"
@@ -24,16 +22,16 @@ resource "aws_security_group" "k3s_sg" {
   vpc_id = var.vpc_id
 
   ingress {
-    from_port       = 30000
-    to_port         = 32767
+    from_port       = 30080
+    to_port         = 30080
     protocol        = "tcp"
     security_groups = [aws_security_group.alb_sg.id]
   }
   ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    self        = true
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
+    self      = true
   }
   egress {
     from_port   = 0

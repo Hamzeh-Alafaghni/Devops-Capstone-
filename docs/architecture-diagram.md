@@ -1,25 +1,57 @@
-# Architecture Diagram
+# Implemented architecture
 
-The provided reference architecture is in [`aws-architecture.svg`](./aws-architecture.svg)
-/ [`aws-architecture.png`](./aws-architecture.png) — also linked from the root
-`README.md`. It depicts:
+```mermaid
+flowchart TB
+  browser[Browser] --> alb[Public ALB HTTP :80]
+  subgraph vpc[VPC across two availability zones]
+    subgraph public[Public subnets]
+      alb
+      nat[NAT EC2 instance]
+      igw[Internet gateway]
+      nat --> igw
+    end
+    subgraph private[Private subnets]
+      cp[k3s control plane + deployment runner]
+      workers[Worker ASG: desired 2, maximum 4]
+      traefik[Traefik NodePort :30080]
+      alb --> workers --> traefik
+      traefik --> auth[auth-service :5001]
+      traefik --> catalog[catalog-service :5002]
+      traefik --> orders[orders-service :5003]
+      traefik --> frontend[Nginx React frontend :80]
+      orders -->|authenticated stock changes| catalog
+      auth --> db[(RDS PostgreSQL 15)]
+      catalog --> db
+      orders --> db
+      cp --> workers
+      cp --> nat
+      workers --> nat
+    end
+  end
+  github[GitHub Actions] -->|OIDC| ci[Hosted CI: test and build]
+  ci --> ecr[Four ECR repositories: SHA tags]
+  github -->|OIDC| tf[Terraform plan/apply]
+  tf --> state[(S3 state + DynamoDB lock)]
+  tf --> vpc
+  github -->|trusted successful main push| cp
+  ecr --> workers
+  secrets[Secrets Manager: RDS-managed password] -->|hourly sync| cp
+  cp -->|Kubernetes Secrets| auth
+  cp -->|Kubernetes Secrets| catalog
+  cp -->|Kubernetes Secrets| orders
+```
 
-- GitHub Actions (CI on GitHub-hosted runners; CD on a self-hosted runner
-  registered on the k3s control-plane instance) -> AWS via OIDC, no static keys
-- VPC (10.0.0.0/16), public/private subnets across 2 AZs, Internet Gateway,
-  NAT Instance (not a paid NAT Gateway)
-- Self-managed k3s on EC2: one control-plane instance + an Auto Scaling Group
-  of worker instances, all in private subnets, managed via SSM (no SSH keys,
-  no public IPs)
-- Application Load Balancer (public subnets, both AZs) -> NodePort on k3s
-  nodes -> Traefik (bundled with k3s) -> ClusterIP Services -> pods
-- orders-service -> catalog-service HTTP call (inter-service communication)
-- Amazon RDS PostgreSQL (private subnets, RDS subnet group) — replaces the
-  per-service SQLite files once you complete the migration in README §5.6
-- 4 ECR repositories (auth, catalog, orders, frontend) and an S3 bucket for
-  Terraform remote state + DB backups
+All application resources are in namespace `marketly`. HPA controls 2–4 orders
+replicas using CPU metrics. One shared signing key supports local JWT verification
+and authenticated inventory updates. Database credentials are injected at deployment
+and refreshed by a systemd timer; ECR pull credentials refresh hourly.
 
-If your actual implementation diverges from this reference (e.g. you changed
-instance types, added a bastion, split subnets differently), update the
-diagram to match what you actually built — it should describe your
-deployment, not just the assignment's reference design.
+The root module composes all eight required modules. Nodes have no public IPs or
+SSH rules and use SSM for operator access. Workers are registered automatically
+with the ALB target group through the ASG attachment. Traefik uses cluster-wide
+service routing, so NodePort traffic can reach pods on another node.
+
+This diagram describes the configuration, not proof of a live deployment.
+`aws-architecture.svg` and `.png` remain the original assignment reference;
+this Markdown diagram is the current implementation source of truth. RDS native
+backups are configured; separate S3 database exports are not implemented.

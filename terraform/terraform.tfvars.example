@@ -1,0 +1,5 @@
+aws_region = "us-east-1"
+project = "marketly"
+github_repository = "Hamzeh-Alafaghni/Devops-Capstone"
+state_bucket = "YOUR-UNIQUE-STATE-BUCKET"
+state_lock_table = "marketly-terraform-locks"

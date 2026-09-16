@@ -1,6 +1,6 @@
 """
 catalog-service
-Owns its own SQLite database (catalog.db). Seeds sample products across a
+Owns its PostgreSQL products table. Seeds sample products across a
 few categories on first run.
 
 Read endpoints (list/detail/categories) are public. Write endpoints
@@ -18,15 +18,17 @@ Listens on :5002
 import os
 import psycopg2
 import psycopg2.extras
+from psycopg2.extensions import connection
+from flask import g, has_app_context
 import math
+import secrets
 
 import jwt
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
-DB_PATH = os.environ.get("CATALOG_DB_PATH", os.path.join(os.path.dirname(__file__), "catalog.db"))
-SHARED_SECRET = os.environ.get("SHARED_SECRET", "dev-shared-secret-change-me")
+SHARED_SECRET = os.environ["SHARED_SECRET"]
 CORS_ALLOWED_ORIGIN = os.environ.get("CORS_ALLOWED_ORIGIN", "http://localhost:5173")
 
 SORT_COLUMNS = {
@@ -73,14 +75,39 @@ def cors_preflight(_unused=None):
     return "", 204
 
 
+class Database(connection):
+    """Small psycopg2 convenience API; cursors live until connection close."""
+    def execute(self, sql, params=None):
+        cursor = self.cursor()
+        cursor.execute(sql, params)
+        return cursor
+
+    def executemany(self, sql, rows):
+        cursor = self.cursor()
+        cursor.executemany(sql, rows)
+        return cursor
+
+
 def get_db():
-    conn = psycopg2.connect(os.environ.get("DATABASE_URL"))
-    conn.cursor_factory = psycopg2.extras.DictCursor
+    conn = psycopg2.connect(
+        os.environ["DATABASE_URL"], connection_factory=Database,
+        cursor_factory=psycopg2.extras.RealDictCursor, connect_timeout=10,
+    )
+    if has_app_context():
+        g.setdefault("connections", []).append(conn)
     return conn
+
+
+@app.teardown_appcontext
+def close_connections(error=None):
+    for conn in g.pop("connections", []):
+        conn.close()
 
 
 def init_db():
     conn = get_db()
+    # Serialize schema creation and seeding across replicas. Released on close.
+    conn.execute("SELECT pg_advisory_lock(102)")
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS products (
@@ -94,12 +121,6 @@ def init_db():
         )
         """
     )
-    # Backfill columns for anyone upgrading from the old schema.
-    existing_cols = {row["name"] for row in conn.execute("PRAGMA table_info(products)")}
-    if "category" not in existing_cols:
-        conn.execute("ALTER TABLE products ADD COLUMN category TEXT NOT NULL DEFAULT 'General'")
-    if "image_url" not in existing_cols:
-        conn.execute("ALTER TABLE products ADD COLUMN image_url TEXT DEFAULT ''")
 
     count = conn.execute("SELECT COUNT(*) AS c FROM products").fetchone()["c"]
     if count == 0:
@@ -218,7 +239,7 @@ def create_product():
 
     conn = get_db()
     cur = conn.execute(
-        "INSERT INTO products (name, description, price, stock, category, image_url) VALUES (%s, %s, %s, %s, %s, %s)",
+        "INSERT INTO products (name, description, price, stock, category, image_url) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
         (
             name,
             data.get("description", ""),
@@ -229,7 +250,7 @@ def create_product():
         ),
     )
     conn.commit()
-    new_id = cur.lastrowid
+    new_id = cur.fetchone()["id"]
     row = conn.execute("SELECT * FROM products WHERE id = %s", (new_id,)).fetchone()
     conn.close()
     return jsonify(row_to_dict(row)), 201
@@ -287,17 +308,16 @@ def delete_product(product_id):
 
 @app.route("/api/products/<int:product_id>/stock", methods=["PATCH"])
 def adjust_stock(product_id):
-    """Internal endpoint: orders-service calls this to decrement stock when
-    an order is placed, and to restore it when an order is cancelled. Trusted
-    as internal service-to-service traffic (in AWS this only reaches the
-    catalog-service ClusterIP, never the public ALB)."""
+    """Authenticate stock changes even when the path is reachable through ingress."""
+    if not secrets.compare_digest(request.headers.get("X-Service-Secret", ""), SHARED_SECRET):
+        return jsonify(error="service authentication required"), 403
     data = request.get_json(force=True) or {}
     delta = data.get("delta")
-    if delta is None:
+    if type(delta) is not int:
         return jsonify(error="delta is required"), 400
 
     conn = get_db()
-    row = conn.execute("SELECT * FROM products WHERE id = %s", (product_id,)).fetchone()
+    row = conn.execute("SELECT * FROM products WHERE id = %s FOR UPDATE", (product_id,)).fetchone()
     if not row:
         conn.close()
         return jsonify(error="product not found"), 404

@@ -1,28 +1,49 @@
 name: CD - Deploy to k3s
 on:
   workflow_run:
-    workflows: ["CI - Build and Push"]
-    types:
-      - completed
-    branches: [ "main" ]
+    workflows: ['CI - Build and Push']
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: marketly-deploy
+  cancel-in-progress: false
 jobs:
   deploy:
-    runs-on: self-hosted
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: [self-hosted, linux, x64, marketly]
+    timeout-minutes: 45
+    env:
+      IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+      PROJECT: ${{ vars.PROJECT || 'marketly' }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
+      DATABASE_HOST: ${{ vars.DATABASE_HOST }}
+      DATABASE_SECRET_ARN: ${{ vars.DATABASE_SECRET_ARN }}
+      KUBECONFIG: /home/runner/.kube/config
     steps:
-    - uses: actions/checkout@v3
-    - name: Apply Kubernetes Manifests
-      run: |
-        kubectl apply -f k8s/namespace.yaml
-        kubectl apply -f k8s/auth-service/
-        kubectl apply -f k8s/catalog-service/
-        kubectl apply -f k8s/orders-service/
-        kubectl apply -f k8s/frontend/
-        kubectl apply -f k8s/ingress.yaml
-        kubectl apply -f k8s/hpa.yaml
-    - name: Verify Rollouts
-      run: |
-        kubectl rollout status deployment/auth
-        kubectl rollout status deployment/catalog
-        kubectl rollout status deployment/orders
-        kubectl rollout status deployment/frontend
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Wait for this commit's infrastructure pipeline
+        uses: actions/github-script@v7
+        with:
+          script: |
+            for (let attempt = 0; attempt < 120; attempt++) {
+              const { data } = await github.rest.actions.listWorkflowRuns({ ...context.repo,
+                workflow_id: 'terraform.yml', head_sha: process.env.IMAGE_TAG, event: 'push' });
+              const run = data.workflow_runs[0];
+              if (run?.status === 'completed') {
+                if (run.conclusion !== 'success') throw new Error('Infrastructure pipeline failed');
+                return;
+              }
+              await new Promise(resolve => setTimeout(resolve, 15000));
+            }
+            throw new Error('Timed out waiting for infrastructure');
+      - name: Deploy and verify all services
+        run: bash scripts/deploy-k8s.sh

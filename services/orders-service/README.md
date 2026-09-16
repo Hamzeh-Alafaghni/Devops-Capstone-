@@ -1,3 +1,8 @@
+> This service now requires PostgreSQL. Start the complete stack with
+> `./scripts/local.sh` from the repository root. For standalone execution, set
+> `DATABASE_URL` and `SHARED_SECRET` first. SQLite path variables are no longer used.
+> See the root README for deployment and verification.
+
 # orders-service
 
 Owns order data. Authenticates requests by decoding the JWT locally (same
@@ -32,6 +37,6 @@ Listens on `http://localhost:5003`. Requires catalog-service reachable at
 
 ## Environment variables
 
-- `ORDERS_DB_PATH` — path to SQLite file (default: `orders.db` next to app.py)
+- `DATABASE_URL` — required PostgreSQL connection URL
 - `SHARED_SECRET` — **must match auth-service's `SHARED_SECRET`**
 - `CATALOG_SERVICE_URL` — base URL of catalog-service (default `http://localhost:5002`)

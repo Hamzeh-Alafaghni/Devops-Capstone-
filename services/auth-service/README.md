@@ -1,3 +1,8 @@
+> This service now requires PostgreSQL. Start the complete stack with
+> `./scripts/local.sh` from the repository root. For standalone execution, set
+> `DATABASE_URL` and `SHARED_SECRET` first. SQLite path variables are no longer used.
+> See the root README for deployment and verification.
+
 # auth-service
 
 Owns user accounts and session security for Marketly: registration, login,
@@ -14,12 +19,10 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Listens on `http://localhost:5001`. On first run it seeds an admin account
-(`admin` / `admin1234` by default — override with `ADMIN_SEED_USERNAME` /
-`ADMIN_SEED_PASSWORD` / `ADMIN_SEED_EMAIL`) and a demo customer account
-(`demo` / `demo1234` by default — override with `DEMO_SEED_USERNAME` /
-`DEMO_SEED_PASSWORD` / `DEMO_SEED_EMAIL`) so the regular customer flow can be
-tested without registering a new account first.
+Listens on `http://localhost:5001`. Seeding is opt-in: set
+`ADMIN_SEED_PASSWORD` to create an admin, or `DEMO_SEED_PASSWORD` to create a demo
+customer. Their default usernames are `admin` and `demo`; there are no default
+passwords. Existing accounts are not reset when seed settings change.
 
 ## Session model
 
@@ -46,11 +49,11 @@ tested without registering a new account first.
   and repeated failed logins for one username trigger a temporary lockout
   (`LOGIN_MAX_ATTEMPTS` within `LOGIN_ATTEMPT_WINDOW_MINUTES`, locked for
   `LOGIN_LOCKOUT_MINUTES`). This is intentionally dependency-free (no Redis)
-  since the service runs as a single process; it resets on restart.
+  and applies separately to each Gunicorn worker/pod; it resets on restart.
 
 Email verification and password-reset flows are intentionally out of scope —
 they require an external mail provider, which is outside what this
-single-process teaching service depends on.
+teaching service depends on.
 
 ## Endpoints
 
@@ -78,16 +81,16 @@ network call.
 
 ## Environment variables
 
-- `AUTH_DB_PATH` — path to SQLite file (default: `users.db` next to app.py)
+- `DATABASE_URL` — required PostgreSQL connection URL
 - `SHARED_SECRET` — JWT signing secret for access tokens. **Must be the
   same value** on catalog-service and orders-service since they verify
   tokens without calling auth-service.
 - `ADMIN_SEED_USERNAME` / `ADMIN_SEED_PASSWORD` / `ADMIN_SEED_EMAIL` —
-  credentials for the auto-seeded admin account (default `admin` /
-  `admin1234` / `admin@example.com`).
+  optional admin seed settings; password is required to enable seeding.
+  Username/email default to `admin` / `admin@example.com`.
 - `DEMO_SEED_USERNAME` / `DEMO_SEED_PASSWORD` / `DEMO_SEED_EMAIL` —
-  credentials for the auto-seeded demo customer account (default `demo` /
-  `demo1234` / `demo@example.com`).
+  optional customer seed settings; password is required to enable seeding.
+  Username/email default to `demo` / `demo@example.com`.
 - `CORS_ALLOWED_ORIGIN` — the single origin allowed to make
   credentialed requests (default `http://localhost:5173`). Wildcard CORS
   is not used because cookies require an explicit origin.

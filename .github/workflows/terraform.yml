@@ -1,38 +1,78 @@
 name: Terraform Pipeline
 on:
   push:
-    branches: [ "main" ]
-    paths:
-      - 'terraform/**'
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
-    paths:
-      - 'terraform/**'
+    paths: ['terraform/**', '.github/workflows/terraform.yml']
+  workflow_dispatch:
 permissions:
-  id-token: write
   contents: read
-env:
-  AWS_REGION: "us-east-1"
-  ROLE_ARN: "arn:aws:iam::678419966897:role/github-actions-oidc-role"
+concurrency:
+  group: terraform-${{ github.event_name == 'pull_request' && github.event.number || 'main' }}
+  cancel-in-progress: false
 jobs:
-  terraform:
+  validate:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.8
+      - run: terraform fmt -check -recursive terraform
+      - run: terraform -chdir=terraform init -backend=false
+      - run: terraform -chdir=terraform validate
+      - run: terraform -chdir=terraform test
+  plan-apply:
+    needs: validate
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'pull_request' && 'terraform-plan' || 'terraform-apply' }}
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    env:
+      TF_IN_AUTOMATION: true
+      OIDC_PROVIDER_ARN: ${{ vars.OIDC_PROVIDER_ARN }}
+      TF_VAR_aws_region: ${{ vars.AWS_REGION }}
+      TF_VAR_project: ${{ vars.PROJECT || 'marketly' }}
+      TF_VAR_github_repository: ${{ github.repository }}
+      TF_VAR_state_bucket: ${{ vars.STATE_BUCKET }}
+      TF_VAR_state_lock_table: ${{ vars.STATE_LOCK_TABLE }}
     defaults:
       run:
-        working-directory: ./terraform
+        working-directory: terraform
     steps:
-    - uses: actions/checkout@v3
-    - name: Configure AWS credentials via OIDC
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        role-to-assume: ${{ env.ROLE_ARN }}
-        aws-region: ${{ env.AWS_REGION }}
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v2
-    - name: Terraform Init
-      run: terraform init
-    - name: Terraform Plan
-      run: terraform plan
-    - name: Terraform Apply
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      run: terraform apply -auto-approve
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.8
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ github.event_name == 'pull_request' && vars.PLAN_ROLE_ARN || vars.TERRAFORM_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Initialize remote state
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=$TF_VAR_state_bucket" \
+            -backend-config="key=$TF_VAR_project/terraform.tfstate" \
+            -backend-config="region=$TF_VAR_aws_region" \
+            -backend-config="dynamodb_table=$TF_VAR_state_lock_table" \
+            -backend-config=encrypt=true
+      - name: Plan
+        run: |
+          if [[ -n "$OIDC_PROVIDER_ARN" ]]; then export TF_VAR_oidc_provider_arn="$OIDC_PROVIDER_ARN"; fi
+          terraform plan -input=false -no-color -lock-timeout=5m -out=deployment.tfplan | tee plan.txt
+      - name: Comment plan summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('terraform/plan.txt', 'utf8');
+            const summary = plan.match(/Plan:.*|No changes\..*/)?.[0] || 'Plan completed; see workflow logs.';
+            await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number,
+              body: `Terraform: ${summary}\n[Workflow logs](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})` });
+      - name: Apply the reviewed plan
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: terraform apply -input=false deployment.tfplan

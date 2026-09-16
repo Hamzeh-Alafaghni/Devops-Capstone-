@@ -1,6 +1,6 @@
 """
 auth-service (Marketly)
-Owns its own SQLite database (users.db) — no other service may write to it.
+Owns its PostgreSQL users and refresh_tokens tables — no other service may write to it.
 
 Auth model:
   - Short-lived JWT *access token* (15 min), returned in the response body.
@@ -27,6 +27,8 @@ import os
 import re
 import psycopg2
 import psycopg2.extras
+from psycopg2.extensions import connection
+from flask import g, has_app_context
 import secrets
 import hashlib
 import datetime
@@ -37,8 +39,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
-DB_PATH = os.environ.get("AUTH_DB_PATH", os.path.join(os.path.dirname(__file__), "users.db"))
-SHARED_SECRET = os.environ.get("SHARED_SECRET", "dev-shared-secret-change-me")
+SHARED_SECRET = os.environ["SHARED_SECRET"]
 
 ACCESS_TOKEN_EXP_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXP_MINUTES", "15"))
 REFRESH_TOKEN_EXP_DAYS = int(os.environ.get("REFRESH_TOKEN_EXP_DAYS", "30"))
@@ -56,11 +57,11 @@ CORS_ALLOWED_ORIGIN = os.environ.get("CORS_ALLOWED_ORIGIN", "http://localhost:51
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 ADMIN_SEED_USERNAME = os.environ.get("ADMIN_SEED_USERNAME", "admin")
-ADMIN_SEED_PASSWORD = os.environ.get("ADMIN_SEED_PASSWORD", "admin1234")
+ADMIN_SEED_PASSWORD = os.environ.get("ADMIN_SEED_PASSWORD")
 ADMIN_SEED_EMAIL = os.environ.get("ADMIN_SEED_EMAIL", "admin@example.com")
 
 DEMO_SEED_USERNAME = os.environ.get("DEMO_SEED_USERNAME", "demo")
-DEMO_SEED_PASSWORD = os.environ.get("DEMO_SEED_PASSWORD", "demo1234")
+DEMO_SEED_PASSWORD = os.environ.get("DEMO_SEED_PASSWORD")
 DEMO_SEED_EMAIL = os.environ.get("DEMO_SEED_EMAIL", "demo@example.com")
 
 # --- Rate limiting / account lockout (in-memory; fine for a single process) ---
@@ -148,14 +149,39 @@ def cors_preflight(_unused):
 
 # --- DB ---
 
+class Database(connection):
+    """Small psycopg2 convenience API; cursors live until connection close."""
+    def execute(self, sql, params=None):
+        cursor = self.cursor()
+        cursor.execute(sql, params)
+        return cursor
+
+    def executemany(self, sql, rows):
+        cursor = self.cursor()
+        cursor.executemany(sql, rows)
+        return cursor
+
+
 def get_db():
-    conn = psycopg2.connect(os.environ.get("DATABASE_URL"))
-    conn.cursor_factory = psycopg2.extras.DictCursor
+    conn = psycopg2.connect(
+        os.environ["DATABASE_URL"], connection_factory=Database,
+        cursor_factory=psycopg2.extras.RealDictCursor, connect_timeout=10,
+    )
+    if has_app_context():
+        g.setdefault("connections", []).append(conn)
     return conn
+
+
+@app.teardown_appcontext
+def close_connections(error=None):
+    for conn in g.pop("connections", []):
+        conn.close()
 
 
 def init_db():
     conn = get_db()
+    # Serialize schema creation and seeding across replicas. Released on close.
+    conn.execute("SELECT pg_advisory_lock(101)")
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS users (
@@ -187,7 +213,7 @@ def init_db():
     existing = conn.execute(
         "SELECT id FROM users WHERE username = %s", (ADMIN_SEED_USERNAME,)
     ).fetchone()
-    if not existing:
+    if not existing and ADMIN_SEED_PASSWORD:
         conn.execute(
             """
             INSERT INTO users (username, password_hash, email, full_name, address, role, created_at)
@@ -207,7 +233,7 @@ def init_db():
     existing_demo = conn.execute(
         "SELECT id FROM users WHERE username = %s", (DEMO_SEED_USERNAME,)
     ).fetchone()
-    if not existing_demo:
+    if not existing_demo and DEMO_SEED_PASSWORD:
         conn.execute(
             """
             INSERT INTO users (username, password_hash, email, full_name, address, role, created_at)
@@ -273,7 +299,7 @@ def revoke_refresh_token(conn, token_hash):
         "UPDATE refresh_tokens SET revoked_at = %s WHERE token_hash = %s AND revoked_at IS NULL",
         (datetime.datetime.utcnow().isoformat(), token_hash),
     )
-    conn.commit()
+
 
 
 def find_valid_refresh_token(conn, raw_token):
@@ -281,7 +307,7 @@ def find_valid_refresh_token(conn, raw_token):
         return None
     token_hash = _hash_token(raw_token)
     row = conn.execute(
-        "SELECT * FROM refresh_tokens WHERE token_hash = %s", (token_hash,)
+        "SELECT * FROM refresh_tokens WHERE token_hash = %s FOR UPDATE", (token_hash,)
     ).fetchone()
     if not row:
         return None
@@ -470,6 +496,7 @@ def logout():
     if raw_refresh:
         conn = get_db()
         revoke_refresh_token(conn, _hash_token(raw_refresh))
+        conn.commit()
         conn.close()
     resp = make_response(jsonify(message="logged out"), 200)
     clear_auth_cookies(resp)

@@ -1,6 +1,6 @@
 """
 orders-service
-Owns its own SQLite database (orders.db). Verifies JWTs locally using the
+Owns its PostgreSQL orders table. Verifies JWTs locally using the
 same SHARED_SECRET as auth-service (no network call needed to authenticate).
 
 For every order line item it calls catalog-service over HTTP to confirm the
@@ -18,6 +18,8 @@ Listens on :5003. Requires catalog-service running (default http://localhost:500
 import os
 import psycopg2
 import psycopg2.extras
+from psycopg2.extensions import connection
+from flask import g, has_app_context
 import datetime
 import json
 
@@ -27,8 +29,7 @@ from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
-DB_PATH = os.environ.get("ORDERS_DB_PATH", os.path.join(os.path.dirname(__file__), "orders.db"))
-SHARED_SECRET = os.environ.get("SHARED_SECRET", "dev-shared-secret-change-me")
+SHARED_SECRET = os.environ["SHARED_SECRET"]
 CATALOG_SERVICE_URL = os.environ.get("CATALOG_SERVICE_URL", "http://localhost:5002")
 CORS_ALLOWED_ORIGIN = os.environ.get("CORS_ALLOWED_ORIGIN", "http://localhost:5173")
 
@@ -57,14 +58,39 @@ def cors_preflight(_unused=None):
     return "", 204
 
 
+class Database(connection):
+    """Small psycopg2 convenience API; cursors live until connection close."""
+    def execute(self, sql, params=None):
+        cursor = self.cursor()
+        cursor.execute(sql, params)
+        return cursor
+
+    def executemany(self, sql, rows):
+        cursor = self.cursor()
+        cursor.executemany(sql, rows)
+        return cursor
+
+
 def get_db():
-    conn = psycopg2.connect(os.environ.get("DATABASE_URL"))
-    conn.cursor_factory = psycopg2.extras.DictCursor
+    conn = psycopg2.connect(
+        os.environ["DATABASE_URL"], connection_factory=Database,
+        cursor_factory=psycopg2.extras.RealDictCursor, connect_timeout=10,
+    )
+    if has_app_context():
+        g.setdefault("connections", []).append(conn)
     return conn
+
+
+@app.teardown_appcontext
+def close_connections(error=None):
+    for conn in g.pop("connections", []):
+        conn.close()
 
 
 def init_db():
     conn = get_db()
+    # Serialize schema creation and seeding across replicas. Released on close.
+    conn.execute("SELECT pg_advisory_lock(103)")
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS orders (
@@ -78,11 +104,6 @@ def init_db():
         )
         """
     )
-    existing_cols = {row["name"] for row in conn.execute("PRAGMA table_info(orders)")}
-    if "status" not in existing_cols:
-        conn.execute("ALTER TABLE orders ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'")
-    if "updated_at" not in existing_cols:
-        conn.execute("ALTER TABLE orders ADD COLUMN updated_at TEXT")
     conn.commit()
     conn.close()
 
@@ -129,6 +150,7 @@ def adjust_catalog_stock(product_id, delta):
     resp = requests.patch(
         f"{CATALOG_SERVICE_URL}/api/products/{product_id}/stock",
         json={"delta": delta},
+        headers={"X-Service-Secret": SHARED_SECRET},
         timeout=5,
     )
     resp.raise_for_status()
@@ -148,8 +170,13 @@ def create_order():
 
     data = request.get_json(force=True) or {}
     requested_items = data.get("items", [])  # [{product_id, quantity}]
-    if not requested_items:
+    if not isinstance(requested_items, list) or not requested_items:
         return jsonify(error="items is required and must be non-empty"), 400
+
+    if any(not isinstance(item, dict) or type(item.get("product_id")) is not int
+           or type(item.get("quantity", 1)) is not int or item.get("quantity", 1) <= 0
+           for item in requested_items):
+        return jsonify(error="items require an integer product_id and positive integer quantity"), 400
 
     order_items = []
     total = 0.0
@@ -200,11 +227,11 @@ def create_order():
     now = datetime.datetime.utcnow().isoformat()
     conn = get_db()
     cur = conn.execute(
-        "INSERT INTO orders (username, items_json, total, status, created_at, updated_at) VALUES (%s, %s, %s, 'pending', %s, %s)",
+        "INSERT INTO orders (username, items_json, total, status, created_at, updated_at) VALUES (%s, %s, %s, 'pending', %s, %s) RETURNING id",
         (username, json.dumps(order_items), total, now, now),
     )
     conn.commit()
-    row = conn.execute("SELECT * FROM orders WHERE id = %s", (cur.lastrowid,)).fetchone()
+    row = conn.execute("SELECT * FROM orders WHERE id = %s", (cur.fetchone()["id"],)).fetchone()
     conn.close()
 
     return jsonify(order_to_dict(row)), 201
@@ -239,7 +266,7 @@ def get_order(order_id):
         return jsonify(error="missing or invalid bearer token"), 401
 
     conn = get_db()
-    row = conn.execute("SELECT * FROM orders WHERE id = %s", (order_id,)).fetchone()
+    row = conn.execute("SELECT * FROM orders WHERE id = %s FOR UPDATE", (order_id,)).fetchone()
     conn.close()
     if not row or row["username"] != username:
         return jsonify(error="order not found"), 404
@@ -253,7 +280,7 @@ def cancel_order(order_id):
         return jsonify(error="missing or invalid bearer token"), 401
 
     conn = get_db()
-    row = conn.execute("SELECT * FROM orders WHERE id = %s", (order_id,)).fetchone()
+    row = conn.execute("SELECT * FROM orders WHERE id = %s FOR UPDATE", (order_id,)).fetchone()
     if not row or row["username"] != username:
         conn.close()
         return jsonify(error="order not found"), 404
@@ -270,7 +297,7 @@ def cancel_order(order_id):
     now = datetime.datetime.utcnow().isoformat()
     conn.execute("UPDATE orders SET status = 'cancelled', updated_at = %s WHERE id = %s", (now, order_id))
     conn.commit()
-    row = conn.execute("SELECT * FROM orders WHERE id = %s", (order_id,)).fetchone()
+    row = conn.execute("SELECT * FROM orders WHERE id = %s FOR UPDATE", (order_id,)).fetchone()
     conn.close()
     return jsonify(order_to_dict(row)), 200
 
@@ -297,7 +324,7 @@ def set_order_status(order_id):
         return jsonify(error=f"status must be one of {VALID_STATUSES}"), 400
 
     conn = get_db()
-    row = conn.execute("SELECT * FROM orders WHERE id = %s", (order_id,)).fetchone()
+    row = conn.execute("SELECT * FROM orders WHERE id = %s FOR UPDATE", (order_id,)).fetchone()
     if not row:
         conn.close()
         return jsonify(error="order not found"), 404
@@ -305,7 +332,7 @@ def set_order_status(order_id):
     now = datetime.datetime.utcnow().isoformat()
     conn.execute("UPDATE orders SET status = %s, updated_at = %s WHERE id = %s", (new_status, now, order_id))
     conn.commit()
-    row = conn.execute("SELECT * FROM orders WHERE id = %s", (order_id,)).fetchone()
+    row = conn.execute("SELECT * FROM orders WHERE id = %s FOR UPDATE", (order_id,)).fetchone()
     conn.close()
     return jsonify(order_to_dict(row)), 200
 

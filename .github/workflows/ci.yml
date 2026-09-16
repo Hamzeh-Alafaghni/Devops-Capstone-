@@ -1,44 +1,65 @@
 name: CI - Build and Push
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
 permissions:
-  id-token: write
   contents: read
-env:
-  AWS_REGION: "us-east-1"
-  AWS_ACCOUNT_ID: "678419966897"
-  ROLE_ARN: "arn:aws:iam::678419966897:role/github-actions-oidc-role"
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  build-and-push:
+  test-build-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      PROJECT: ${{ vars.PROJECT || 'marketly' }}
     steps:
-    - uses: actions/checkout@v3
-    - name: Configure AWS credentials via OIDC
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        role-to-assume: ${{ env.ROLE_ARN }}
-        aws-region: ${{ env.AWS_REGION }}
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
-    - name: Build and push images
-      if: github.event_name == 'push'
-      run: |
-        # Auth
-        docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/devops-auth:latest ./services/auth-service
-        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/devops-auth:latest
-        
-        # Catalog
-        docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/devops-catalog:latest ./services/catalog-service
-        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/devops-catalog:latest
-        
-        # Orders
-        docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/devops-orders:latest ./services/orders-service
-        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/devops-orders:latest
-        
-        # Frontend
-        docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/devops-frontend:latest ./frontend
-        docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/devops-frontend:latest
+      - uses: actions/checkout@v4
+      - name: Generate isolated test configuration
+        run: |
+          umask 077
+          printf 'POSTGRES_PASSWORD=%s\nSHARED_SECRET=%s\n' "$(openssl rand -hex 24)" "$(openssl rand -hex 32)" > .env
+      - name: Build all four images and start PostgreSQL
+        run: docker compose up --build -d --wait --wait-timeout 180
+      - name: Test complete application flow
+        run: python3 tests/smoke.py
+      - name: PostgreSQL concurrency and product mutation tests
+        run: docker compose exec -T catalog-service python < tests/catalog.py
+      - name: Backend health checks
+        run: |
+          for svc in auth-service catalog-service orders-service; do
+            docker compose exec -T "$svc" python -c 'import app; assert app.app.test_client().get("/health").status_code == 200'
+          done
+      - name: Configure AWS using OIDC
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.CI_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Log in to ECR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Push the tested images with immutable commit tags
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          for service in auth-service catalog-service orders-service frontend; do
+            image=$(docker compose images -q "$service")
+            target="$REGISTRY/$PROJECT/$service:$GITHUB_SHA"
+            docker tag "$image" "$target"
+            if ! aws ecr describe-images --repository-name "$PROJECT/$service" --image-ids "imageTag=$GITHUB_SHA" >/dev/null 2>&1; then
+              docker push "$target"
+            fi
+          done
+      - name: Failure logs
+        if: failure()
+        run: docker compose logs --tail=100
+      - name: Clean up
+        if: always()
+        run: docker compose down -v

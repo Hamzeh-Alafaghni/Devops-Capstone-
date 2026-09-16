@@ -1,24 +1,23 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
-
-echo "=== Kubernetes Pod Status ==="
-kubectl get pods
-
-echo -e "\n=== Testing /health endpoints via Port-Forward ==="
-services=("auth-service" "catalog-service" "orders-service")
-
-for svc in "${services[@]}"; do
-    echo "Testing $svc..."
-    kubectl port-forward svc/$svc 8080:80 &>/dev/null &
-    PF_PID=$!
-    
-    sleep 3 
-    
-    if curl -s http://localhost:8080/health | grep -q "status"; then
-        echo "✅ $svc is healthy!"
-    else
-        echo "❌ $svc health check failed or returned unexpected response."
-    fi
-    
-    kill $PF_PID
+kubectl -n marketly get pods
+PF_PID=''
+cleanup() { if [[ -n "$PF_PID" ]]; then kill "$PF_PID" 2>/dev/null || true; wait "$PF_PID" 2>/dev/null || true; fi; }
+trap cleanup EXIT
+for item in auth-service:5001 catalog-service:5002 orders-service:5003; do
+  service=${item%:*}
+  port=${item#*:}
+  kubectl -n marketly rollout status "deployment/$service" --timeout=120s
+  kubectl -n marketly port-forward "service/$service" "18080:$port" >/dev/null 2>&1 &
+  PF_PID=$!
+  healthy=false
+  for attempt in {1..20}; do
+    if curl --fail --silent --max-time 2 http://127.0.0.1:18080/health >/dev/null; then healthy=true; break; fi
+    kill -0 "$PF_PID" 2>/dev/null || break
+    sleep 1
+  done
+  cleanup
+  PF_PID=''
+  [[ "$healthy" == true ]] || { echo "$service health check failed" >&2; exit 1; }
+  echo "$service healthy"
 done

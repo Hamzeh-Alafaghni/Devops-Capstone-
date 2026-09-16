@@ -1,0 +1,5 @@
+bucket         = "YOUR-UNIQUE-STATE-BUCKET"
+key            = "marketly/terraform.tfstate"
+region         = "us-east-1"
+dynamodb_table = "marketly-terraform-locks"
+encrypt        = true

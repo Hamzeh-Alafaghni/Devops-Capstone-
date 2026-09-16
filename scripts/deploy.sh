@@ -1,14 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
-
-echo "Applying Terraform infrastructure..."
-cd terraform
-terraform init
-terraform apply -auto-approve
-cd ..
-
-echo "Applying Kubernetes manifests..."
-kubectl apply -f k8s/namespace.yaml
-kubectl apply -f k8s/
-
-echo "Deployment triggered! Check status with: kubectl get pods"
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+terraform -chdir="$ROOT/terraform" init -backend-config=backend.hcl
+terraform -chdir="$ROOT/terraform" apply
+export ECR_REGISTRY DATABASE_HOST DATABASE_SECRET_ARN
+ECR_REGISTRY=$(terraform -chdir="$ROOT/terraform" output -raw ecr_registry)
+DATABASE_HOST=$(terraform -chdir="$ROOT/terraform" output -raw database_host)
+DATABASE_SECRET_ARN=$(terraform -chdir="$ROOT/terraform" output -raw database_secret_arn)
+# Requires kubeconfig access through an SSM tunnel, or run on the control plane.
+bash "$ROOT/scripts/deploy-k8s.sh"

@@ -35,16 +35,6 @@ export default function Login() {
     }
   }
 
-  function fillDemo(role) {
-    if (role === "admin") {
-      setUsername("admin");
-      setPassword("admin1234");
-    } else {
-      setUsername("demo");
-      setPassword("demo1234");
-    }
-  }
-
   return (
     <div className="grid min-h-[calc(100vh-3.5rem)] lg:grid-cols-2">
       {/* Brand / pitch panel */}
@@ -139,22 +129,7 @@ export default function Login() {
             </Link>
           </p>
 
-          <div className="mt-8 rounded-md border border-ink-200 bg-ink-50 p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-ink-400">
-              Try it instantly
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" className="btn-secondary btn-sm" onClick={() => fillDemo("customer")}>
-                Use demo customer
-              </button>
-              <button type="button" className="btn-secondary btn-sm" onClick={() => fillDemo("admin")}>
-                Use demo admin
-              </button>
-            </div>
-            <p className="mt-3 font-mono text-[11px] text-ink-400">
-              demo / demo1234 &middot; admin / admin1234
-            </p>
-          </div>
+
         </div>
       </div>
     </div>

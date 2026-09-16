@@ -1,39 +1,57 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: catalog
+  name: catalog-service
+  namespace: marketly
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: catalog
+      app: catalog-service
   template:
     metadata:
       labels:
-        app: catalog
+        app: catalog-service
     spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: ecr-pull
       containers:
-      - name: catalog
-        image: 678419966897.dkr.ecr.us-east-1.amazonaws.com/devops-catalog:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 5002
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "128Mi"
-          limits:
-            cpu: "250m"
-            memory: "256Mi"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 5002
-          initialDelaySeconds: 15
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 5002
-          initialDelaySeconds: 5
-          periodSeconds: 5
+        - name: catalog-service
+          image: marketly/catalog-service:replace-me
+          ports:
+            - containerPort: 5002
+          envFrom:
+            - secretRef:
+                name: app-secrets
+            - configMapRef:
+                name: app-config
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 96Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 5002
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5002
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5002
+            periodSeconds: 10

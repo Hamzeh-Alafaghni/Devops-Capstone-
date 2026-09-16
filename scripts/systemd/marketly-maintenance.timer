@@ -1,0 +1,8 @@
+[Unit]
+Description=Refresh Marketly credentials hourly (ECR credentials expire after 12h)
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1h
+Persistent=true
+[Install]
+WantedBy=timers.target

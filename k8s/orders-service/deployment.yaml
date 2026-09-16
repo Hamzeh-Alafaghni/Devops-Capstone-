@@ -1,47 +1,56 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: orders
+  name: orders-service
+  namespace: marketly
 spec:
-  replicas: 2
   selector:
     matchLabels:
-      app: orders
+      app: orders-service
   template:
     metadata:
       labels:
-        app: orders
+        app: orders-service
     spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: ecr-pull
       containers:
-      - name: orders
-        image: 678419966897.dkr.ecr.us-east-1.amazonaws.com/devops-orders:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 5003
-        env:
-        - name: SHARED_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: orders-secrets
-              key: SHARED_SECRET
-        - name: CATALOG_URL
-          value: "http://catalog:5002"
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "128Mi"
-          limits:
-            cpu: "250m"
-            memory: "256Mi"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 5003
-          initialDelaySeconds: 15
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 5003
-          initialDelaySeconds: 5
-          periodSeconds: 5
+        - name: orders-service
+          image: marketly/orders-service:replace-me
+          ports:
+            - containerPort: 5003
+          envFrom:
+            - secretRef:
+                name: app-secrets
+            - configMapRef:
+                name: app-config
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 96Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 5003
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5003
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5003
+            periodSeconds: 10

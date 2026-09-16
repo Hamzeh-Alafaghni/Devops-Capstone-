@@ -1,8 +1,14 @@
+> This service now requires PostgreSQL. Start the complete stack with
+> `./scripts/local.sh` from the repository root. For standalone execution, set
+> `DATABASE_URL` and `SHARED_SECRET` first. SQLite path variables are no longer used.
+> See the root README for deployment and verification.
+
 # catalog-service
 
-Owns the product catalog. Read endpoints are public; write endpoints and the
-internal stock-adjustment endpoint require an admin JWT, verified locally
-with the same `SHARED_SECRET` auth-service signs with.
+Owns the product catalog. Read endpoints are public;
+product mutation endpoints require an admin JWT, verified locally with
+the same `SHARED_SECRET` auth-service signs with. Stock adjustments require
+`X-Service-Secret` matching that shared secret, supplied only by orders-service.
 
 ## Run standalone
 
@@ -30,6 +36,6 @@ categories on first run.
 
 ## Environment variables
 
-- `CATALOG_DB_PATH` — path to SQLite file (default: `catalog.db` next to app.py)
+- `DATABASE_URL` — required PostgreSQL connection URL
 - `SHARED_SECRET` — JWT verification secret. **Must match** auth-service's
   value so admin tokens issued by auth-service are accepted here.

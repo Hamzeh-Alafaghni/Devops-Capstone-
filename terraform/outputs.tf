@@ -1,0 +1,9 @@
+output "alb_url" { value = "http://${module.alb.dns_name}" }
+output "control_plane_id" { value = module.ec2_cluster.control_plane_id }
+output "database_host" { value = module.rds.address }
+output "database_secret_arn" { value = module.rds.secret_arn }
+output "ecr_registry" { value = split("/", values(module.ecr.repository_urls)[0])[0] }
+output "repository_urls" { value = module.ecr.repository_urls }
+output "ci_role_arn" { value = module.iam_oidc.ci_role_arn }
+output "terraform_role_arn" { value = module.iam_oidc.terraform_role_arn }
+output "plan_role_arn" { value = module.iam_oidc.plan_role_arn }

@@ -1,4 +1,2 @@
-variable "vpc_id" {
-  description = "The ID of the VPC"
-  type        = string
-}
+variable "vpc_id" { type = string }
+variable "vpc_cidr" { type = string }

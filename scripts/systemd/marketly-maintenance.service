@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh ECR and RDS credentials for Marketly
+After=k3s.service network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+Environment=KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+EnvironmentFile=/etc/marketly.env
+ExecStart=/usr/local/lib/marketly/refresh-ecr.sh
+ExecStart=/usr/bin/python3 /usr/local/lib/marketly/sync-secrets.py --restart

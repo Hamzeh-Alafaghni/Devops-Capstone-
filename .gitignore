@@ -1,0 +1,16 @@
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+*.db
+.terraform/
+*.tfstate*
+*.tfplan
+terraform.tfvars
+backend.hcl
+!backend.hcl.example

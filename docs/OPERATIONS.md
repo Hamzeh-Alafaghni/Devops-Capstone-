@@ -131,6 +131,16 @@ A separate configuration fault set `CATALOG_URL` while the code reads
 `CATALOG_SERVICE_URL`; fixing that restored order-to-catalog calls in containers.
 The end-to-end test now checks both the returned order and the changed inventory.
 
+## Debugging GitHub OIDC
+
+The first live pipeline reached AWS authentication but failed with
+`Not authorized to perform sts:AssumeRoleWithWebIdentity`. The repository's
+OIDC API reported immutable subjects containing owner/repository IDs, while
+Terraform trusted the older name-only subjects. Set `github_oidc_subject_prefix`
+and repository variable `OIDC_SUBJECT_PREFIX` from the API's `sub_claim_prefix`.
+The fix preserves exact branch/environment restrictions. Mock tests cover both
+formats. See [GitHub's OIDC reference](https://docs.github.com/en/actions/reference/security/oidc).
+
 ## Limitations to explain in a demo
 
 The application uses one RDS database/account, with table ownership by convention.

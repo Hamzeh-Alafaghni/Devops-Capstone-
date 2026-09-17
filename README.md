@@ -122,6 +122,7 @@ all four built containers. See [validation and remaining evidence](docs/VALIDATI
 | `CI_ROLE_ARN` | Terraform `ci_role_arn` output |
 | `TERRAFORM_ROLE_ARN` | `terraform_role_arn` output |
 | `PLAN_ROLE_ARN` | `plan_role_arn` output |
+| `OIDC_SUBJECT_PREFIX` | repository OIDC `sub_claim_prefix`, when immutable subjects are enabled |
 | `ECR_REGISTRY` | `ecr_registry` output |
 | `DATABASE_HOST` | `database_host` output |
 | `DATABASE_SECRET_ARN` | `database_secret_arn` output |
@@ -137,6 +138,12 @@ names; only trusted maintainers should approve infrastructure workflows.
 
 For an existing OIDC provider, also set repository variable `OIDC_PROVIDER_ARN`
 to its ARN. All workflows should use the same project, region and state settings.
+
+Check `gh api repos/OWNER/REPOSITORY/actions/oidc/customization/sub`. When
+`use_immutable_subject` is true, copy its `sub_claim_prefix` into local
+`github_oidc_subject_prefix` and GitHub variable `OIDC_SUBJECT_PREFIX`.
+These subjects include immutable owner/repository IDs; a legacy `repo:owner/name`
+trust condition will reject them. Empty/default settings support legacy subjects.
 
 If the VPC quota is full, set `existing_vpc_id` and `subnet_offset` in local
 Terraform variables and the matching GitHub variables above. Terraform creates

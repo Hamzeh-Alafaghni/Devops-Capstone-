@@ -25,25 +25,35 @@ mock_provider "aws" {
 run "reuse_existing_vpc" {
   command = plan
   variables {
-    existing_vpc_id = "vpc-0123456789abcdef0"
-    subnet_offset   = 10
+    existing_vpc_id            = "vpc-0123456789abcdef0"
+    subnet_offset              = 10
+    github_oidc_subject_prefix = "repo:example@123/marketly@456"
   }
   assert {
     condition     = module.vpc.vpc_id == "vpc-0123456789abcdef0" && module.vpc.vpc_cidr == "10.0.0.0/16"
     error_message = "Existing VPC deployments must retain the supplied VPC and its CIDR."
   }
+  assert {
+    condition     = module.iam_oidc.trust_subjects.ci == "repo:example@123/marketly@456:ref:refs/heads/main" && module.iam_oidc.trust_subjects.terraform == "repo:example@123/marketly@456:environment:terraform-apply"
+    error_message = "Immutable repository IDs must be preserved in both branch and environment trust subjects."
+  }
 }
 mock_provider "random" {}
 variables {
-  github_repository = "example/marketly"
-  state_bucket      = "marketly-test-state"
-  state_lock_table  = "marketly-terraform-locks"
-  existing_vpc_id   = null
-  subnet_offset     = 0
-  oidc_provider_arn = null
+  github_repository          = "example/marketly"
+  state_bucket               = "marketly-test-state"
+  state_lock_table           = "marketly-terraform-locks"
+  existing_vpc_id            = null
+  subnet_offset              = 0
+  oidc_provider_arn          = null
+  github_oidc_subject_prefix = ""
 }
 run "architecture" {
   command = apply
+  assert {
+    condition     = module.iam_oidc.trust_subjects.ci == "repo:example/marketly:ref:refs/heads/main"
+    error_message = "Legacy repositories must retain their branch-scoped subject format."
+  }
   assert {
     condition     = length(module.ecr.repository_urls) == 4
     error_message = "Every component needs an ECR repository."

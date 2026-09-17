@@ -45,12 +45,13 @@ module "alb" {
   asg_name          = module.ec2_cluster.asg_name
 }
 module "iam_oidc" {
-  source            = "./modules/iam-oidc"
-  project           = var.project
-  region            = var.aws_region
-  github_repository = var.github_repository
-  repository_arns   = module.ecr.repository_arns
-  state_bucket      = var.state_bucket
-  state_lock_table  = var.state_lock_table
-  oidc_provider_arn = var.oidc_provider_arn
+  source                     = "./modules/iam-oidc"
+  project                    = var.project
+  region                     = var.aws_region
+  github_repository          = var.github_repository
+  github_oidc_subject_prefix = var.github_oidc_subject_prefix
+  repository_arns            = module.ecr.repository_arns
+  state_bucket               = var.state_bucket
+  state_lock_table           = var.state_lock_table
+  oidc_provider_arn          = var.oidc_provider_arn
 }

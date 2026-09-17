@@ -5,11 +5,12 @@ resource "aws_iam_openid_connect_provider" "github" {
   client_id_list = ["sts.amazonaws.com"]
 }
 locals {
-  provider_arn = var.oidc_provider_arn != null ? var.oidc_provider_arn : aws_iam_openid_connect_provider.github[0].arn
+  provider_arn   = var.oidc_provider_arn != null ? var.oidc_provider_arn : aws_iam_openid_connect_provider.github[0].arn
+  subject_prefix = var.github_oidc_subject_prefix != "" ? var.github_oidc_subject_prefix : "repo:${var.github_repository}"
   subjects = {
-    ci        = "repo:${var.github_repository}:ref:refs/heads/main"
-    terraform = "repo:${var.github_repository}:environment:terraform-apply"
-    plan      = "repo:${var.github_repository}:environment:terraform-plan"
+    ci        = "${local.subject_prefix}:ref:refs/heads/main"
+    terraform = "${local.subject_prefix}:environment:terraform-apply"
+    plan      = "${local.subject_prefix}:environment:terraform-plan"
   }
 }
 resource "aws_iam_role" "github" {

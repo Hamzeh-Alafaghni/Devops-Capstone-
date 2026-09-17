@@ -20,6 +20,11 @@ variable "github_repository" {
   default     = "Hamzeh-Alafaghni/Devops-Capstone-"
 }
 variable "state_bucket" { type = string }
+variable "github_oidc_subject_prefix" {
+  type        = string
+  default     = ""
+  description = "sub_claim_prefix from GitHub's OIDC customization API for immutable subjects; empty uses legacy repo:owner/name."
+}
 variable "existing_vpc_id" {
   type        = string
   default     = null

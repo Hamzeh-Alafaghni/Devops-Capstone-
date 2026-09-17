@@ -7,3 +7,4 @@ output "repository_urls" { value = module.ecr.repository_urls }
 output "ci_role_arn" { value = module.iam_oidc.ci_role_arn }
 output "terraform_role_arn" { value = module.iam_oidc.terraform_role_arn }
 output "plan_role_arn" { value = module.iam_oidc.plan_role_arn }
+output "github_oidc_subjects" { value = module.iam_oidc.trust_subjects }

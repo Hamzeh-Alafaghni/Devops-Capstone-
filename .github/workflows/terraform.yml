@@ -39,6 +39,7 @@ jobs:
       TF_VAR_aws_region: ${{ vars.AWS_REGION }}
       TF_VAR_project: ${{ vars.PROJECT || 'marketly' }}
       TF_VAR_github_repository: ${{ github.repository }}
+      TF_VAR_github_oidc_subject_prefix: ${{ vars.OIDC_SUBJECT_PREFIX }}
       TF_VAR_state_bucket: ${{ vars.STATE_BUCKET }}
       TF_VAR_state_lock_table: ${{ vars.STATE_LOCK_TABLE }}
     defaults:

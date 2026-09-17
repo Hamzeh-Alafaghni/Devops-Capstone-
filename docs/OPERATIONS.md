@@ -20,6 +20,15 @@ Install/start its service with `sudo ./svc.sh install runner` and
 `sudo ./svc.sh start`. Registration tokens are short-lived; never commit them or
 put them in EC2 user-data. Refresh the kubeconfig copy after a cluster replacement.
 
+For repeatable installation, `scripts/install-runner.sh` performs the same setup
+and verifies the official Linux x64 runner archive against `RUNNER_SHA256`.
+Supply `AWS_REGION`, `GITHUB_REPOSITORY`, `RUNNER_VERSION`, `RUNNER_SHA256`, and
+`RUNNER_TOKEN_PARAMETER`. Store a freshly generated GitHub runner registration
+token in that SSM SecureString and temporarily grant only the control-plane role
+`ssm:GetParameter` on its exact ARN. Run the script as root through SSM, then
+delete the parameter and temporary IAM policy. No GitHub personal token is
+installed on the instance. An existing registration is never overwritten.
+
 The deployment runner has cluster-admin access and its instance profile can read
 application credentials. Restrict which workflows may target it; never run
 untrusted PR jobs there. The CD workflow accepts only successful same-repository
@@ -90,6 +99,13 @@ observed replica changes and return to idle. HPA changes pod count only; the
 worker ASG has a fixed desired capacity of two and no cluster autoscaler.
 Four replicas may require more worker capacity; adjust the ASG/instance sizing
 in Terraform before attempting larger loads.
+
+`BASE_URL=http://YOUR-ALB DURATION_SECONDS=180 CONCURRENCY=24 python3
+scripts/load-test.py` creates one unique test customer and sends authenticated
+read requests for a bounded period. It prints request totals without tokens and
+places no orders. Record HPA/current replica observations separately; successful
+requests alone do not prove scaling. Allow the HPA's downscale stabilization
+window to elapse after the load ends.
 
 ## Deployment and rollback
 

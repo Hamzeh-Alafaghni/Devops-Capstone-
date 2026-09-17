@@ -95,7 +95,7 @@ all four built containers. See [validation and remaining evidence](docs/VALIDATI
    `terraform/terraform.tfvars.example` to `terraform/terraform.tfvars`.
    Set matching state bucket, lock table and AWS region. The state key must be
    `<project>/terraform.tfstate` (default `marketly/terraform.tfstate`).
-   The target repository is `Hamzeh-Alafaghni/Devops-Capstone`.
+   The target repository is `Hamzeh-Alafaghni/Devops-Capstone-`.
    If this account already has GitHub's OIDC provider, set `oidc_provider_arn`
    to that ARN instead of creating a duplicate.
 4. Provision using your bootstrap identity (the GitHub roles do not exist yet):
@@ -125,6 +125,8 @@ all four built containers. See [validation and remaining evidence](docs/VALIDATI
 | `ECR_REGISTRY` | `ecr_registry` output |
 | `DATABASE_HOST` | `database_host` output |
 | `DATABASE_SECRET_ARN` | `database_secret_arn` output |
+| `EXISTING_VPC_ID` | optional VPC to reuse without owning or deleting it |
+| `SUBNET_OFFSET` | first unused subnet index; default `0`, reserve four consecutive ranges |
 
 Create GitHub environments `terraform-plan` and `terraform-apply`. Restrict
 `terraform-apply` to `main`; require review for `terraform-plan` before running
@@ -135,6 +137,14 @@ names; only trusted maintainers should approve infrastructure workflows.
 
 For an existing OIDC provider, also set repository variable `OIDC_PROVIDER_ARN`
 to its ARN. All workflows should use the same project, region and state settings.
+
+If the VPC quota is full, set `existing_vpc_id` and `subnet_offset` in local
+Terraform variables and the matching GitHub variables above. Terraform creates
+four new subnets and separate route tables/security groups, while the existing
+VPC and internet gateway remain data sources. Select unused ranges and ensure
+DNS support/hostnames are enabled. Existing subnets, workers and databases are
+not imported into this state and are not deleted by its teardown. The default
+configuration still provisions a new VPC and gateway for a fresh account.
 
 For manual deployment, set `AWS_REGION`, `IMAGE_TAG` (a tested full commit SHA),
 and `PROJECT`. `scripts/deploy.sh` applies Terraform and invokes deployment;
@@ -158,6 +168,6 @@ verification, separate least-privilege database users, HTTPS with secure cookies
 and durable/idempotent order workflows. Password rotation is synchronized by the
 maintenance timer; pods restart when the stored connection URL changes.
 
-The original repository tracked `node_modules` and SQLite fixtures. They are
-excluded from Docker build contexts and ignored for new files. Existing tracked
-copies remain untouched; fresh builds always run `npm ci` from the lockfile.
+Installed dependencies, generated frontend builds, legacy SQLite databases and
+local Terraform variables are no longer tracked. Local copies are preserved;
+fresh builds run `npm ci` from the lockfile. Historical commits are unchanged.

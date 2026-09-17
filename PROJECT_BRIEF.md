@@ -1,5 +1,9 @@
 # DevOps Capstone Project — Full Brief
 
+> Original assignment specification. References below to empty files and SQLite
+> describe the starting scaffold. See `README.md` for the implementation and
+> `docs/VALIDATION.md` for verified completion evidence.
+
 ## 1. Overview
 
 This capstone has two parts with very different starting points:

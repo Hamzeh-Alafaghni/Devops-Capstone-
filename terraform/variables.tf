@@ -17,9 +17,19 @@ variable "vpc_cidr" {
 variable "github_repository" {
   type        = string
   description = "GitHub owner/repository, case sensitive."
-  default     = "Hamzeh-Alafaghni/Devops-Capstone"
+  default     = "Hamzeh-Alafaghni/Devops-Capstone-"
 }
 variable "state_bucket" { type = string }
+variable "existing_vpc_id" {
+  type        = string
+  default     = null
+  description = "Optional existing VPC; it and its gateway remain outside this state and survive teardown."
+}
+variable "subnet_offset" {
+  type        = number
+  default     = 0
+  description = "First /24 subnet index in the /16 VPC; reserve four consecutive unused ranges."
+}
 variable "state_lock_table" { type = string }
 variable "k3s_version" {
   type    = string

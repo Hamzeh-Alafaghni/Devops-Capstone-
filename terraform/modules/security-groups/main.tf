@@ -1,6 +1,6 @@
 
 resource "aws_security_group" "alb_sg" {
-  name   = "alb-sg"
+  name   = "${var.project}-alb-sg"
   vpc_id = var.vpc_id
 
   ingress {
@@ -18,7 +18,7 @@ resource "aws_security_group" "alb_sg" {
 }
 
 resource "aws_security_group" "k3s_sg" {
-  name   = "k3s-sg"
+  name   = "${var.project}-k3s-sg"
   vpc_id = var.vpc_id
 
   ingress {
@@ -42,7 +42,7 @@ resource "aws_security_group" "k3s_sg" {
 }
 
 resource "aws_security_group" "rds_sg" {
-  name   = "rds-sg"
+  name   = "${var.project}-rds-sg"
   vpc_id = var.vpc_id
 
   ingress {
@@ -54,7 +54,7 @@ resource "aws_security_group" "rds_sg" {
 }
 
 resource "aws_security_group" "nat_sg" {
-  name   = "nat-sg"
+  name   = "${var.project}-nat-sg"
   vpc_id = var.vpc_id
 
   ingress {

@@ -34,6 +34,8 @@ jobs:
     env:
       TF_IN_AUTOMATION: true
       OIDC_PROVIDER_ARN: ${{ vars.OIDC_PROVIDER_ARN }}
+      EXISTING_VPC_ID: ${{ vars.EXISTING_VPC_ID }}
+      TF_VAR_subnet_offset: ${{ vars.SUBNET_OFFSET || '0' }}
       TF_VAR_aws_region: ${{ vars.AWS_REGION }}
       TF_VAR_project: ${{ vars.PROJECT || 'marketly' }}
       TF_VAR_github_repository: ${{ github.repository }}
@@ -62,6 +64,7 @@ jobs:
       - name: Plan
         run: |
           if [[ -n "$OIDC_PROVIDER_ARN" ]]; then export TF_VAR_oidc_provider_arn="$OIDC_PROVIDER_ARN"; fi
+          if [[ -n "$EXISTING_VPC_ID" ]]; then export TF_VAR_existing_vpc_id="$EXISTING_VPC_ID"; fi
           terraform plan -input=false -no-color -lock-timeout=5m -out=deployment.tfplan | tee plan.txt
       - name: Comment plan summary
         if: github.event_name == 'pull_request'

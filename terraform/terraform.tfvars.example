@@ -1,5 +1,8 @@
 aws_region = "us-east-1"
 project = "marketly"
-github_repository = "Hamzeh-Alafaghni/Devops-Capstone"
+github_repository = "Hamzeh-Alafaghni/Devops-Capstone-"
 state_bucket = "YOUR-UNIQUE-STATE-BUCKET"
 state_lock_table = "marketly-terraform-locks"
+# Optional, when reusing an existing VPC with an attached internet gateway:
+# existing_vpc_id = "vpc-0123456789abcdef0"
+# subnet_offset = 10 # creates x.x.10.0/24 through x.x.13.0/24 in a /16

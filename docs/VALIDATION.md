@@ -1,8 +1,8 @@
 # Local implementation evidence
 
-Validation performed on 2026-09-16. No AWS resources were provisioned and no
-GitHub workflows were remotely triggered. Local validation is not evidence that
-AWS permissions, resource quotas, or a live self-hosted runner have been tested.
+Local validation repeated on 2026-09-17. The checks below passed against the
+isolated `marketly-check` Compose project. Live deployment work is tracked in
+`docs/LIVE_EVIDENCE.md`; this table alone is not proof of an AWS deployment.
 
 | Check | Result |
 | --- | --- |
@@ -16,7 +16,7 @@ AWS permissions, resource quotas, or a live self-hosted runner have been tested.
 | Admin product create/update/delete using PostgreSQL `RETURNING` | Passed |
 | Two concurrent reservations for one item yield one success | Passed |
 | Terraform root and state-bootstrap provider validation | Passed |
-| Terraform mock-provider application across all eight modules | Passed; 1 test run |
+| Terraform mock-provider application across all eight modules | Passed; 2 test runs (fresh network and existing VPC) |
 | Terraform recursive formatting | Passed |
 | GitHub Actions actionlint, including workflow shell checks | Passed |
 | Bash syntax and Kustomize rendering | Passed |

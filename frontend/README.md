@@ -93,6 +93,5 @@ scratch using common, non-proprietary UI patterns.
 npm run build
 ```
 
-Outputs static files to `dist/` — this is what the frontend Dockerfile
-(currently empty, a student task) should build and serve, typically via
-Nginx.
+Outputs static files to `dist/`. The frontend Dockerfile builds them in a
+Node stage and serves them from Nginx with same-origin API routing.

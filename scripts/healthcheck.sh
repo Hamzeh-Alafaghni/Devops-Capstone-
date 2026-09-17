@@ -4,7 +4,7 @@ kubectl -n marketly get pods
 PF_PID=''
 cleanup() { if [[ -n "$PF_PID" ]]; then kill "$PF_PID" 2>/dev/null || true; wait "$PF_PID" 2>/dev/null || true; fi; }
 trap cleanup EXIT
-for item in auth-service:5001 catalog-service:5002 orders-service:5003; do
+for item in auth-service:5001 catalog-service:5002 orders-service:5003 frontend:80; do
   service=${item%:*}
   port=${item#*:}
   kubectl -n marketly rollout status "deployment/$service" --timeout=120s

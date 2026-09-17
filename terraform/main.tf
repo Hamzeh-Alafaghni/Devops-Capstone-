@@ -1,11 +1,14 @@
 module "vpc" {
-  source   = "./modules/vpc"
-  vpc_cidr = var.vpc_cidr
+  source          = "./modules/vpc"
+  vpc_cidr        = var.vpc_cidr
+  existing_vpc_id = var.existing_vpc_id
+  subnet_offset   = var.subnet_offset
 }
 module "security_groups" {
   source   = "./modules/security-groups"
   vpc_id   = module.vpc.vpc_id
-  vpc_cidr = var.vpc_cidr
+  vpc_cidr = module.vpc.vpc_cidr
+  project  = var.project
 }
 module "nat_instance" {
   source                 = "./modules/nat-instance"

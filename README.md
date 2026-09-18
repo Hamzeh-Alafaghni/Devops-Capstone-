@@ -91,6 +91,12 @@ all four built containers. See [validation and remaining evidence](docs/VALIDATI
 
    Keep the bootstrap state securely; it is not checked into Git. The bucket and
    lock table have `prevent_destroy` and remain after application teardown.
+
+   Bootstrap also creates the `marketly-monthly` account-wide cost budget
+   (`monthly_budget_usd`, default `20`). Set `budget_alert_email` in an ignored
+   bootstrap `terraform.tfvars` file to enable actual-spend email alerts at 80%
+   and 100%. The budget sends notifications; it does not stop resources. Keep
+   recipient addresses out of Git.
 3. Copy `terraform/backend.hcl.example` to `terraform/backend.hcl` and
    `terraform/terraform.tfvars.example` to `terraform/terraform.tfvars`.
    Set matching state bucket, lock table and AWS region. The state key must be

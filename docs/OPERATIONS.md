@@ -103,7 +103,9 @@ in Terraform before attempting larger loads.
 `BASE_URL=http://YOUR-ALB DURATION_SECONDS=180 CONCURRENCY=24 python3
 scripts/load-test.py` creates one unique test customer and sends authenticated
 read requests for a bounded period. It prints request totals without tokens and
-places no orders. Record HPA/current replica observations separately; successful
+places no orders. For a test that excludes the operator's internet connection,
+run it on the control plane with `BASE_URL=http://127.0.0.1:30080`.
+Record HPA/current replica observations separately; successful
 requests alone do not prove scaling. Allow the HPA's downscale stabilization
 window to elapse after the load ends.
 
@@ -153,6 +155,18 @@ crash recovery across services. The ALB is HTTP for this lab; configure an ACM
 certificate, HTTPS listener, DNS and secure cookies before handling real users.
 
 ## Teardown
+
+Before teardown, capture a reproducible terminal demo:
+
+```bash
+AWS_REGION=us-east-1 CONTROL_PLANE_ID=YOUR-INSTANCE BASE_URL=http://YOUR-ALB \
+  python3 scripts/record-demo.py
+```
+
+This executes the application smoke test and records actual GitHub and SSM
+output to `docs/evidence/demo.cast` (asciicast v2). The smoke test creates a
+unique test customer and a cancelled test order. The committed demo also has a
+standalone HTML playback page in `docs/evidence/demo.html`.
 
 Export any data needed for the demo, stop/remove the GitHub runner registration,
 then run `scripts/teardown.sh` using a bootstrap identity. RDS and repository data

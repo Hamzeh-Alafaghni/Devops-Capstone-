@@ -22,6 +22,8 @@ jobs:
       - run: terraform -chdir=terraform init -backend=false
       - run: terraform -chdir=terraform validate
       - run: terraform -chdir=terraform test
+      - run: terraform -chdir=terraform/bootstrap init -backend=false
+      - run: terraform -chdir=terraform/bootstrap validate
   plan-apply:
     needs: validate
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository

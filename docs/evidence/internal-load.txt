@@ -1,0 +1,6 @@
+SSM command: 0a50cc67-6f8c-4380-8c4b-49ea3f686e1e
+
+Running 12 readers for 60s; watch the orders-service HPA.
+Completed: 10880 successful requests, 0 failures; HPA changes must be observed separately.
+
+Status: Success

@@ -1,0 +1,181 @@
+SSM command: 69e98a51-72a8-41ae-8191-3c477ad88369
+2026-09-18T13:30:57Z
+NAME             REFERENCE                   TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+orders-service   Deployment/orders-service   cpu: 5%/60%   2         4         2          28h
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+orders-service   2/2     2            2           28h
+NAME                              CPU(cores)   MEMORY(bytes)   
+orders-service-78b58d58d4-mccqw   10m          74Mi            
+orders-service-78b58d58d4-zq848   1m           72Mi            
+2026-09-18T13:31:13Z
+NAME             REFERENCE                   TARGETS         MINPODS   MAXPODS   REPLICAS   AGE
+orders-service   Deployment/orders-service   cpu: 258%/60%   2         4         2          28h
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+orders-service   2/4     4            2           28h
+NAME                              CPU(cores)   MEMORY(bytes)   
+orders-service-78b58d58d4-mccqw   275m         74Mi            
+orders-service-78b58d58d4-zq848   241m         72Mi            
+2026-09-18T13:31:28Z
+NAME             REFERENCE                   TARGETS         MINPODS   MAXPODS   REPLICAS   AGE
+orders-service   Deployment/orders-service   cpu: 281%/60%   2         4         4          28h
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+orders-service   4/4     4            4           28h
+NAME                              CPU(cores)   MEMORY(bytes)   
+orders-service-78b58d58d4-8b8ss   300m         74Mi            
+orders-service-78b58d58d4-mccqw   275m         74Mi            
+orders-service-78b58d58d4-ws57f   244m         71Mi            
+orders-service-78b58d58d4-zq848   288m         72Mi            
+2026-09-18T13:31:44Z
+NAME             REFERENCE                   TARGETS         MINPODS   MAXPODS   REPLICAS   AGE
+orders-service   Deployment/orders-service   cpu: 147%/60%   2         4         4          28h
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+orders-service   4/4     4            4           28h
+NAME                              CPU(cores)   MEMORY(bytes)   
+orders-service-78b58d58d4-8b8ss   128m         74Mi            
+orders-service-78b58d58d4-mccqw   218m         75Mi            
+orders-service-78b58d58d4-ws57f   119m         71Mi            
+orders-service-78b58d58d4-zq848   126m         72Mi            
+2026-09-18T13:31:59Z
+NAME             REFERENCE                   TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+orders-service   Deployment/orders-service   cpu: 64%/60%   2         4         4          28h
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+orders-service   4/4     4            4           28h
+NAME                              CPU(cores)   MEMORY(bytes)   
+orders-service-78b58d58d4-8b8ss   66m          74Mi            
+orders-service-78b58d58d4-mccqw   66m          75Mi            
+orders-service-78b58d58d4-ws57f   27m          71Mi            
+orders-service-78b58d58d4-zq848   98m          72Mi            
+2026-09-18T13:32:15Z
+NAME             REFERENCE                   TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+orders-service   Deployment/orders-service   cpu: 35%/60%   2         4         4          28h
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+orders-service   4/4     4            4           28h
+NAME                              CPU(cores)   MEMORY(bytes)   
+orders-service-78b58d58d4-8b8ss   25m          74Mi            
+orders-service-78b58d58d4-mccqw   66m          75Mi            
+orders-service-78b58d58d4-ws57f   27m          71Mi            
+orders-service-78b58d58d4-zq848   24m          72Mi            
+2026-09-18T13:32:30Z
+NAME             REFERENCE                   TARGETS         MINPODS   MAXPODS   REPLICAS   AGE
+orders-service   Deployment/orders-service   cpu: 101%/60%   2         4         4          28h
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+orders-service   4/4     4            4           28h
+NAME                              CPU(cores)   MEMORY(bytes)   
+orders-service-78b58d58d4-8b8ss   96m          74Mi            
+orders-service-78b58d58d4-mccqw   119m         75Mi            
+orders-service-78b58d58d4-ws57f   87m          71Mi            
+orders-service-78b58d58d4-zq848   102m         72Mi            
+2026-09-18T13:32:46Z
+NAME             REFERENCE                   TARGETS         MINPODS   MAXPODS   REPLICAS   AGE
+orders-service   Deployment/orders-service   cpu: 100%/60%   2         4         4          28h
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+orders-service   4/4     4            4           28h
+NAME                              CPU(cores)   MEMORY(bytes)   
+orders-service-78b58d58d4-8b8ss   127m         74Mi            
+orders-service-78b58d58d4-mccqw   78m          75Mi            
+orders-service-78b58d58d4-ws57f   96m          71Mi            
+orders-service-78b58d58d4-zq848   99m          72Mi            
+2026-09-18T13:33:01Z
+NAME             REFERENCE                   TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+orders-service   Deployment/orders-service   cpu: 16%/60%   2         4         4          28h
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+orders-service   4/4     4            4           28h
+NAME                              CPU(cores)   MEMORY(bytes)   
+orders-service-78b58d58d4-8b8ss   17m          74Mi            
+orders-service-78b58d58d4-mccqw   14m          75Mi            
+orders-service-78b58d58d4-ws57f   19m          71Mi            
+orders-service-78b58d58d4-zq848   14m          72Mi            
+2026-09-18T13:33:17Z
+NAME             REFERENCE                   TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+orders-service   Deployment/orders-service   cpu: 76%/60%   2         4         4          28h
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+orders-service   4/4     4            4           28h
+NAME                              CPU(cores)   MEMORY(bytes)   
+orders-service-78b58d58d4-8b8ss   65m          73Mi            
+orders-service-78b58d58d4-mccqw   80m          75Mi            
+orders-service-78b58d58d4-ws57f   99m          71Mi            
+orders-service-78b58d58d4-zq848   62m          72Mi            
+2026-09-18T13:33:33Z
+NAME             REFERENCE                   TARGETS         MINPODS   MAXPODS   REPLICAS   AGE
+orders-service   Deployment/orders-service   cpu: 122%/60%   2         4         4          28h
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+orders-service   4/4     4            4           28h
+NAME                              CPU(cores)   MEMORY(bytes)   
+orders-service-78b58d58d4-8b8ss   126m         73Mi            
+orders-service-78b58d58d4-mccqw   119m         75Mi            
+orders-service-78b58d58d4-ws57f   130m         71Mi            
+orders-service-78b58d58d4-zq848   114m         72Mi            
+2026-09-18T13:33:48Z
+NAME             REFERENCE                   TARGETS         MINPODS   MAXPODS   REPLICAS   AGE
+orders-service   Deployment/orders-service   cpu: 128%/60%   2         4         4          28h
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+orders-service   4/4     4            4           28h
+NAME                              CPU(cores)   MEMORY(bytes)   
+orders-service-78b58d58d4-8b8ss   126m         73Mi            
+orders-service-78b58d58d4-mccqw   128m         75Mi            
+orders-service-78b58d58d4-ws57f   126m         71Mi            
+orders-service-78b58d58d4-zq848   135m         72Mi            
+2026-09-18T13:34:04Z
+NAME             REFERENCE                   TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+orders-service   Deployment/orders-service   cpu: 49%/60%   2         4         4          28h
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+orders-service   4/4     4            4           28h
+NAME                              CPU(cores)   MEMORY(bytes)   
+orders-service-78b58d58d4-8b8ss   42m          73Mi            
+orders-service-78b58d58d4-mccqw   43m          75Mi            
+orders-service-78b58d58d4-ws57f   34m          71Mi            
+orders-service-78b58d58d4-zq848   80m          72Mi            
+2026-09-18T13:34:19Z
+NAME             REFERENCE                   TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+orders-service   Deployment/orders-service   cpu: 14%/60%   2         4         4          28h
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+orders-service   4/4     4            4           28h
+NAME                              CPU(cores)   MEMORY(bytes)   
+orders-service-78b58d58d4-8b8ss   5m           73Mi            
+orders-service-78b58d58d4-mccqw   5m           75Mi            
+orders-service-78b58d58d4-ws57f   34m          71Mi            
+orders-service-78b58d58d4-zq848   12m          72Mi            
+2026-09-18T13:34:35Z
+NAME             REFERENCE                   TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+orders-service   Deployment/orders-service   cpu: 1%/60%   2         4         4          28h
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+orders-service   4/4     4            4           28h
+NAME                              CPU(cores)   MEMORY(bytes)   
+orders-service-78b58d58d4-8b8ss   1m           73Mi            
+orders-service-78b58d58d4-mccqw   1m           75Mi            
+orders-service-78b58d58d4-ws57f   2m           71Mi            
+orders-service-78b58d58d4-zq848   2m           72Mi            
+2026-09-18T13:34:50Z
+NAME             REFERENCE                   TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+orders-service   Deployment/orders-service   cpu: 1%/60%   2         4         4          28h
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+orders-service   4/4     4            4           28h
+NAME                              CPU(cores)   MEMORY(bytes)   
+orders-service-78b58d58d4-8b8ss   1m           73Mi            
+orders-service-78b58d58d4-mccqw   1m           75Mi            
+orders-service-78b58d58d4-ws57f   1m           71Mi            
+orders-service-78b58d58d4-zq848   2m           72Mi            
+Name:                                                  orders-service
+Namespace:                                             marketly
+Labels:                                                <none>
+Annotations:                                           <none>
+CreationTimestamp:                                     Thu, 17 Sep 2026 08:39:52 +0000
+Reference:                                             Deployment/orders-service
+Metrics:                                               ( current / target )
+  resource cpu on pods  (as a percentage of request):  1% (1m) / 60%
+Min replicas:                                          2
+Max replicas:                                          4
+Deployment pods:                                       4 current / 4 desired
+Conditions:
+  Type            Status  Reason               Message
+  ----            ------  ------               -------
+  AbleToScale     True    ScaleDownStabilized  recent recommendations were higher than current one, applying the highest recent recommendation
+  ScalingActive   True    ValidMetricFound     the HPA was able to successfully calculate a replica count from cpu resource utilization (percentage of request)
+  ScalingLimited  True    TooManyReplicas      the desired replica count is more than the maximum replica count
+Events:
+  Type    Reason             Age    From                       Message
+  ----    ------             ----   ----                       -------
+  Normal  SuccessfulRescale  3m54s  horizontal-pod-autoscaler  New size: 4; reason: cpu resource utilization (percentage of request) above target
+
+
+Status: Success

@@ -11,6 +11,15 @@ variable "state_lock_table" {
   type    = string
   default = "marketly-terraform-locks"
 }
+variable "monthly_budget_usd" {
+  type    = number
+  default = 20
+}
+variable "budget_alert_email" {
+  type        = string
+  default     = ""
+  description = "Email recipient for budget notifications; empty creates the budget without email alerts."
+}
 provider "aws" { region = var.aws_region }
 resource "aws_s3_bucket" "state" {
   bucket = var.state_bucket
@@ -46,4 +55,23 @@ resource "aws_dynamodb_table" "locks" {
     type = "S"
   }
   lifecycle { prevent_destroy = true }
+}
+
+resource "aws_budgets_budget" "monthly" {
+  name         = "marketly-monthly"
+  budget_type  = "COST"
+  limit_amount = tostring(var.monthly_budget_usd)
+  limit_unit   = "USD"
+  time_unit    = "MONTHLY"
+
+  dynamic "notification" {
+    for_each = var.budget_alert_email == "" ? [] : [80, 100]
+    content {
+      comparison_operator        = "GREATER_THAN"
+      threshold                  = notification.value
+      threshold_type             = "PERCENTAGE"
+      notification_type          = "ACTUAL"
+      subscriber_email_addresses = [var.budget_alert_email]
+    }
+  }
 }

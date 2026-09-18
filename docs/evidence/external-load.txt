@@ -1,0 +1,3 @@
+Running 12 readers for 60s; watch the orders-service HPA.
+Completed: 725 successful requests, 5 failures; HPA changes must be observed separately.
+Failure types: {'timeout': 5}

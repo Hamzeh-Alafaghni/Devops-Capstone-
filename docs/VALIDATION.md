@@ -18,7 +18,7 @@ isolated `marketly-check` Compose project. Live deployment work is tracked in
 | Terraform root and state-bootstrap provider validation | Passed |
 | Terraform mock-provider application across all eight modules | Passed; 2 test runs (fresh network and existing VPC) |
 | Terraform recursive formatting | Passed |
-| GitHub Actions actionlint, including workflow shell checks | Passed |
+| GitHub Actions actionlint: workflow syntax and expressions | Passed |
 | Bash syntax and Kustomize rendering | Passed |
 | Kubernetes schema validation | 12 valid resources, no errors |
 
@@ -37,14 +37,11 @@ For standard port/project settings, omit the two environment overrides and
 `-p marketly-check`. The local test stack uses its own named PostgreSQL volume;
 other Docker projects are not modified.
 
-## Remaining live submission evidence
+## Live submission evidence
 
-- A real Terraform plan/apply against the chosen AWS account and remote backend.
-- SSM access, k3s node readiness, NAT outbound connectivity and ALB target health.
-- RDS connectivity and application functionality through the ALB.
-- A reviewed commit pushed to main, with successful CI, Terraform and CD runs.
-- HPA scaling observed under sufficient CPU load.
-- A recorded demo and completed AWS teardown.
+The AWS apply, SSM/k3s readiness, ALB application flow, main-commit CI/CD, HPA
+scale-up and recorded demo are now verified. See [LIVE_EVIDENCE.md](LIVE_EVIDENCE.md)
+for run links, measured load results and teardown status.
 
 Commit history and a recorded live demo cannot be substituted with local tests.
 See [OPERATIONS.md](OPERATIONS.md) for execution, debugging and teardown steps.

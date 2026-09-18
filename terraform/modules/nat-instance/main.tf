@@ -1,15 +1,6 @@
 
-data "aws_ami" "amazon_linux" {
-  most_recent = true
-  owners      = ["amazon"]
-  filter {
-    name   = "name"
-    values = ["al2023-ami-2023.*-x86_64"]
-  }
-}
-
 resource "aws_instance" "nat" {
-  ami                         = data.aws_ami.amazon_linux.id
+  ami                         = var.ami_id
   instance_type               = "t3.micro"
   subnet_id                   = var.public_subnet_id
   vpc_security_group_ids      = [var.nat_sg_id]

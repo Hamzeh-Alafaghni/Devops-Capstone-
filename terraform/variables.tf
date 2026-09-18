@@ -20,6 +20,15 @@ variable "github_repository" {
   default     = "Hamzeh-Alafaghni/Devops-Capstone-"
 }
 variable "state_bucket" { type = string }
+variable "amazon_linux_ami_name" {
+  type        = string
+  default     = "al2023-ami-2023.12.20260917.1-kernel-6.12-x86_64"
+  description = "Pinned AWS image release. Changing it replaces the single control plane; plan a coordinated cluster/runner rebuild."
+  validation {
+    condition     = !strcontains(var.amazon_linux_ami_name, "*") && !strcontains(var.amazon_linux_ami_name, "?")
+    error_message = "Pin an exact image name; wildcard lookups can unexpectedly replace the control plane."
+  }
+}
 variable "github_oidc_subject_prefix" {
   type        = string
   default     = ""

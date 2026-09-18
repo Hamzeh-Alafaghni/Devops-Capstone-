@@ -43,8 +43,8 @@ Commit `03c3706` pushed to main.
 
 ## Historical credential finding
 
-A literal database password exists in commit `64e1d8a`, file
-`terraform/modules/rds/main.tf`. Its value is deliberately omitted. Current RDS
+A literal database password exists in older Git history. Its value and location
+are deliberately omitted from this public report. Current RDS
 uses a new AWS-managed password. Historical credentials should be treated as
 exposed wherever reused. Removing public history requires a coordinated rewrite;
 it has not been performed.
@@ -82,3 +82,13 @@ ALB metrics returned no target/ELB 5xx datapoints and maximum observed per-minut
 p99 target response time was 0.2254 seconds. This supports an external-client or
 network-path explanation; the exact cause of the external timeouts is not proven.
 Raw results: [external](evidence/external-load.txt), [in-AWS](evidence/internal-load.txt).
+
+## Repeat-deployment fault and repair
+
+The 2026-09-18 rerun selected a newer Amazon Linux AMI through an unpinned
+wildcard lookup. Terraform replaced the new control plane, interrupting its
+runner before checkout. The original user resources and RDS databases were
+not affected. The fix pins an exact AMI release and resolves it outside the
+NAT-dependent compute module. Three mock tests pass; a real post-fix plan
+reported no infrastructure changes. Runner recovery and the final rerun are
+being verified before teardown.

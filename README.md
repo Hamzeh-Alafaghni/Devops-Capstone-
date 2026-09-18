@@ -42,6 +42,7 @@ See [the implementation diagram](docs/architecture-diagram.md).
 - VPC: two public and two private subnets across two availability zones.
 - Public ALB → port 30080 → Traefik → four ClusterIP services in `marketly`.
 - Private k3s control plane (`t3.small`) and 2–4 ASG workers (`t3.micro`).
+- An exact Amazon Linux image release is pinned; OS upgrades require a planned cluster/runner rebuild.
 - Private PostgreSQL 15 RDS instance; RDS manages its password in Secrets Manager.
 - A public NAT EC2 instance provides outbound connectivity; nodes use SSM, not SSH.
 - Four immutable ECR repositories, with images tagged by the full Git commit SHA.

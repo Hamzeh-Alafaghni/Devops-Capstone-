@@ -1,11 +1,3 @@
-data "aws_ami" "amazon_linux" {
-  most_recent = true
-  owners      = ["amazon"]
-  filter {
-    name   = "name"
-    values = ["al2023-ami-2023.*-x86_64"]
-  }
-}
 resource "random_password" "join" {
   length  = 48
   special = false
@@ -54,7 +46,7 @@ resource "aws_iam_instance_profile" "control_plane" {
   role = aws_iam_role.control_plane.name
 }
 resource "aws_instance" "control_plane" {
-  ami                    = data.aws_ami.amazon_linux.id
+  ami                    = var.ami_id
   instance_type          = "t3.small"
   subnet_id              = var.private_subnet_ids[0]
   vpc_security_group_ids = [var.k3s_sg_id]
@@ -71,7 +63,7 @@ resource "aws_instance" "control_plane" {
 }
 resource "aws_launch_template" "worker" {
   name_prefix   = "${var.project}-worker-"
-  image_id      = data.aws_ami.amazon_linux.id
+  image_id      = var.ami_id
   instance_type = var.worker_instance_type
   iam_instance_profile { name = aws_iam_instance_profile.node.name }
   vpc_security_group_ids = [var.k3s_sg_id]

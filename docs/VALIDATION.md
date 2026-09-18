@@ -16,7 +16,7 @@ isolated `marketly-check` Compose project. Live deployment work is tracked in
 | Admin product create/update/delete using PostgreSQL `RETURNING` | Passed |
 | Two concurrent reservations for one item yield one success | Passed |
 | Terraform root and state-bootstrap provider validation | Passed |
-| Terraform mock-provider application across all eight modules | Passed; 2 test runs (fresh network and existing VPC) |
+| Terraform mock-provider application across all eight modules | Passed; 3 test runs (fresh network, existing VPC/OIDC, reject floating image) |
 | Terraform recursive formatting | Passed |
 | GitHub Actions actionlint: workflow syntax and expressions | Passed |
 | Bash syntax and Kustomize rendering | Passed |

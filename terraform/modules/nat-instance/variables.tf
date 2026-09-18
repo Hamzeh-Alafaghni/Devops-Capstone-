@@ -1,3 +1,4 @@
+variable "ami_id" { type = string }
 variable "public_subnet_id" {
   description = "The ID of the public subnet where the NAT instance will reside"
   type        = string

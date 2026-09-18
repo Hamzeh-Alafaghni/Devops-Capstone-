@@ -12,6 +12,7 @@ module "security_groups" {
 }
 module "nat_instance" {
   source                 = "./modules/nat-instance"
+  ami_id                 = data.aws_ami.amazon_linux.id
   public_subnet_id       = module.vpc.public_subnet_ids[0]
   nat_sg_id              = module.security_groups.nat_sg_id
   private_route_table_id = module.vpc.private_route_table_id
@@ -28,6 +29,7 @@ module "ecr" {
 }
 module "ec2_cluster" {
   source              = "./modules/ec2-cluster"
+  ami_id              = data.aws_ami.amazon_linux.id
   project             = var.project
   region              = var.aws_region
   k3s_version         = var.k3s_version

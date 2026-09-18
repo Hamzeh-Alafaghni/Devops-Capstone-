@@ -143,6 +143,21 @@ and repository variable `OIDC_SUBJECT_PREFIX` from the API's `sub_claim_prefix`.
 The fix preserves exact branch/environment restrictions. Mock tests cover both
 formats. See [GitHub's OIDC reference](https://docs.github.com/en/actions/reference/security/oidc).
 
+## Pinning node images
+
+A live rerun on the following day exposed an infrastructure bug: the wildcard
+Amazon Linux AMI lookup selected a new release and replaced the single control
+plane, taking its runner offline. The root module now resolves one exact,
+versioned `amazon_linux_ami_name` and passes its ID to both compute modules.
+Tests reject wildcard image names. A real plan against the replacement cluster
+confirmed **no changes** after the fix.
+
+Treat a deliberate image or control-plane user-data upgrade as a cluster rebuild:
+back up k3s state if needed, coordinate worker replacement, reinstall the runner
+and maintenance timer, redeploy application secrets/manifests, and verify ALB
+health. The current single-control-plane design is not a zero-downtime OS upgrade
+solution. Keep RDS data outside the node lifecycle.
+
 ## Limitations to explain in a demo
 
 The application uses one RDS database/account, with table ownership by convention.

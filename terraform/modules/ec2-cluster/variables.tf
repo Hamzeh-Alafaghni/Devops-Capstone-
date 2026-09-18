@@ -1,3 +1,4 @@
+variable "ami_id" { type = string }
 variable "project" { type = string }
 variable "region" { type = string }
 variable "k3s_version" { type = string }

@@ -11,6 +11,9 @@ mock_provider "aws" {
   mock_data "aws_availability_zones" {
     defaults = { names = ["us-east-1a", "us-east-1b"] }
   }
+  mock_data "aws_ami" {
+    defaults = { id = "ami-0123456789abcdef0" }
+  }
   mock_data "aws_vpc" {
     defaults = { id = "vpc-0123456789abcdef0", cidr_block = "10.0.0.0/16" }
   }
@@ -66,4 +69,12 @@ run "architecture" {
     condition     = startswith(output.alb_url, "http://") && output.control_plane_id != ""
     error_message = "Deployment must expose the ALB URL and SSM target."
   }
+}
+
+run "reject_unpinned_machine_image" {
+  command = plan
+  variables {
+    amazon_linux_ami_name = "al2023-ami-2023.*-x86_64"
+  }
+  expect_failures = [var.amazon_linux_ami_name]
 }

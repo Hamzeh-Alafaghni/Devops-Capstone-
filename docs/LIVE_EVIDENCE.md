@@ -1,6 +1,6 @@
 # Live deployment evidence
 
-Status: live deployment verified on 2026-09-18; teardown verification pending.
+Status: live deployment and teardown verified on 2026-09-18.
 
 ## Account and resource preservation
 
@@ -28,7 +28,7 @@ Status: live deployment verified on 2026-09-18; teardown verification pending.
 - [x] HPA scaled orders-service from 2 to 4 replicas at 13:31 UTC on 2026-09-18.
 - [x] Actual terminal demo recorded; hourly credential maintenance installed and verified.
 - [x] $20 monthly account-wide budget with email alerts at 80% and 100% configured.
-- [ ] New application resources torn down; existing resources preserved.
+- [x] New application resources torn down; existing resources preserved.
 
 Bootstrap state remains in `terraform/bootstrap/terraform.tfstate` and must not be committed.
 
@@ -90,5 +90,27 @@ wildcard lookup. Terraform replaced the new control plane, interrupting its
 runner before checkout. The original user resources and RDS databases were
 not affected. The fix pins an exact AMI release and resolves it outside the
 NAT-dependent compute module. Three mock tests pass; a real post-fix plan
-reported no infrastructure changes. Runner recovery and the final rerun are
-being verified before teardown.
+reported no infrastructure changes. The recovered runner then completed the
+final green runs: [CI](https://github.com/Hamzeh-Alafaghni/Devops-Capstone-/actions/runs/35352111847),
+[Terraform](https://github.com/Hamzeh-Alafaghni/Devops-Capstone-/actions/runs/35352111858), and
+[CD](https://github.com/Hamzeh-Alafaghni/Devops-Capstone-/actions/runs/35352266690).
+The final cluster had three Ready nodes, all four deployments at 2/2, and both
+replacement ALB targets healthy.
+
+## Teardown verification
+
+The repository teardown script produced `0 to add, 0 to change, 51 to destroy`
+and completed with `Resources: 51 destroyed`. The self-hosted runner was stopped
+and unregistered first. The remote application state now contains zero managed
+resources. Post-teardown AWS checks confirmed:
+
+- the reused VPC and internet gateway remain available;
+- `k3s-workers-asg` remains present and both original workers remain running;
+- `ecommerce-db` remains available;
+- the temporary `marketly-workers` ASG, ALB, ECR repositories, and `marketly-db`
+  are absent;
+- the state bucket remains present, the lock table remains active, and the
+  account-wide `marketly-monthly` budget remains at $20 USD/month with actual
+  spend alerts above 80% and 100%.
+
+See [the teardown audit](evidence/teardown.txt) for the recorded result.

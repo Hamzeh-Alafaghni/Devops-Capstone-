@@ -1,0 +1,25 @@
+Marketly teardown audit
+Date: 2026-09-18
+Region: us-east-1
+
+Terraform destroy plan: 0 to add, 0 to change, 51 to destroy
+Terraform result: Destroy complete! Resources: 51 destroyed.
+Root state managed resources: 0
+
+Preserved resources
+- Existing VPC vpc-0b16400807d701b71: available
+- Existing internet gateway igw-02ee27407114a6ed3: available
+- Existing ASG k3s-workers-asg: present
+- Existing workers i-0a5b0f13bc1aab0b9 and i-0bdccf3ce1279f3c0: running
+- Existing database ecommerce-db: available
+- State bucket marketly-678419966897-us-east-1-state: present
+- Lock table marketly-terraform-locks: ACTIVE
+- Budget marketly-monthly: $20 USD monthly COST budget
+- Budget notifications: ACTUAL spend greater than 80% and 100%
+
+Removed project resources
+- ASG marketly-workers: absent
+- ALB marketly-alb: absent
+- ECR repositories under marketly/: absent
+- Database marketly-db: deleted
+- Temporary self-hosted runner: stopped and unregistered before destroy
